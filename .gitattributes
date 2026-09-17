@@ -1,0 +1,5 @@
+# Keep shell scripts and batch files on the right line endings
+# so ./gradlew works on Linux/macOS CI and checkout works on Windows.
+gradlew text eol=lf
+*.bat text eol=crlf
+*.sh text eol=lf
