@@ -32,6 +32,7 @@ fun AuraTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = AuraColorScheme,
         typography = AuraTypography,
+        shapes = AuraShapes,
         content = content
     )
 }

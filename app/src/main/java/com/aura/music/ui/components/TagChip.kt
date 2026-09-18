@@ -3,6 +3,7 @@ package com.aura.music.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -13,9 +14,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.aura.music.ui.theme.TagColors
 
 private val chipShape = RoundedCornerShape(percent = 50)
+private val FallbackBlue = Color(0xFF38BDF8)
 
 @Composable
 fun TagChip(
@@ -25,15 +27,14 @@ fun TagChip(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val baseColor = parseTagColor(colorHex)
+    val baseColor = parseTagColor(TagColors.displayFor(name, colorHex))
     val containerColor = if (selected) baseColor else baseColor.copy(alpha = 0.12f)
     val contentColor = if (selected) readableTextColor(baseColor) else baseColor
 
     Text(
         text = name,
         color = contentColor,
-        fontSize = 12.sp,
-        fontWeight = FontWeight.SemiBold,
+        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
         modifier = modifier
             .clip(chipShape)
             .background(containerColor)
@@ -43,16 +44,17 @@ fun TagChip(
                 shape = chipShape
             )
             .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 6.dp)
+            .defaultMinSize(minHeight = 30.dp)
+            .padding(horizontal = 10.dp, vertical = 5.dp)
     )
 }
 
 fun parseTagColor(colorHex: String?): Color {
-    if (colorHex.isNullOrBlank()) return Color(0xFF38BDF8)
+    if (colorHex.isNullOrBlank()) return FallbackBlue
     return try {
         Color(android.graphics.Color.parseColor(colorHex))
     } catch (_: Exception) {
-        Color(0xFF38BDF8)
+        FallbackBlue
     }
 }
 

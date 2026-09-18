@@ -1,9 +1,11 @@
 package com.aura.music.ui.addsong
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.work.WorkInfo
 import com.aura.music.data.download.DownloadAudioWorker
+import com.aura.music.data.download.PlaylistImportWorker
 import com.aura.music.domain.repository.ExtractedStreamInfo
 import com.aura.music.domain.repository.PlaylistPreview
 import com.aura.music.domain.repository.SongRepository
@@ -13,6 +15,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -60,13 +64,27 @@ data class AddSongUiState(
 
 @HiltViewModel
 class AddSongViewModel @Inject constructor(
-    private val songRepository: SongRepository
+    private val songRepository: SongRepository,
+    savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(AddSongUiState())
+    private val _uiState = MutableStateFlow(
+        AddSongUiState(
+            // Prefilled when coming from Getting Started → "Use" on a starter track.
+            url = savedStateHandle.get<String>("initialUrl").orEmpty()
+        )
+    )
     val uiState: StateFlow<AddSongUiState> = _uiState.asStateFlow()
 
     private var downloadJob: Job? = null
+
+    init {
+        // Coming from Getting Started starter track: fetch the preview right away
+        // so the user lands on a ready-to-download card.
+        if (_uiState.value.url.isNotBlank()) {
+            preview()
+        }
+    }
 
     fun setUrl(value: String) {
         downloadJob?.cancel()
@@ -171,8 +189,11 @@ class AddSongViewModel @Inject constructor(
                 it.copy(phase = AddSongPhase.Downloading(percent = 0, stage = "resolving"))
             }
 
-            songRepository.observeDownloadWork(workId).collect { workInfo ->
-                if (workInfo == null) return@collect
+            // Terminal states end the collection (first {} below cancels
+            // it) instead of holding a WorkManager observer for the session.
+            songRepository.observeDownloadWork(workId)
+                .onEach { workInfo ->
+                if (workInfo == null) return@onEach
                 when (workInfo.state) {
                     WorkInfo.State.SUCCEEDED -> {
                         val songId = workInfo.outputData
@@ -214,10 +235,17 @@ class AddSongViewModel @Inject constructor(
                         }
                     }
                 }
-            }
+                }
+                .first { it?.state?.isFinished == true }
         }
     }
 
+    /**
+     * Enqueues the playlist import worker and mirrors its progress. The
+     * worker owns the actual downloads, so leaving this screen (or the
+     * ViewModel being cleared) can't abort the import halfway — songs
+     * keep landing in the library either way.
+     */
     fun downloadPlaylist() {
         val phase = _uiState.value.phase as? AddSongPhase.PreviewPlaylist ?: return
         val url = _uiState.value.url.trim()
@@ -225,40 +253,70 @@ class AddSongViewModel @Inject constructor(
 
         downloadJob?.cancel()
         downloadJob = viewModelScope.launch {
+            val workId: UUID
+            try {
+                val tag = if (phase.tagWithPlaylist) phase.preview.title else null
+                workId = songRepository.enqueuePlaylistImport(url, tag)
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(phase = AddSongPhase.Error(e.message ?: "Couldn't start import."))
+                }
+                return@launch
+            }
+
             _uiState.update {
                 it.copy(phase = AddSongPhase.Downloading(percent = 0, stage = "resolving"))
             }
-            val tag = if (phase.tagWithPlaylist) phase.preview.title else null
-            songRepository.importPlaylist(url, tag) { done, total, current ->
-                val pct = if (total > 0) (done * 100 / total).coerceIn(0, 100) else 0
-                _uiState.update {
-                    it.copy(
-                        phase = AddSongPhase.Downloading(
-                            percent = pct,
-                            stage = DownloadAudioWorker.PROGRESS_DOWNLOADING,
-                            subtitle = if (total > 0 && current.isNotEmpty()) {
-                                "$current"
-                            } else null
-                        )
-                    )
+
+            songRepository.observeDownloadWork(workId)
+                .onEach { workInfo ->
+                    if (workInfo == null) return@onEach
+                    when (workInfo.state) {
+                        WorkInfo.State.SUCCEEDED -> {
+                            val output = workInfo.outputData
+                            _uiState.update {
+                                it.copy(
+                                    phase = AddSongPhase.PlaylistSuccess(
+                                        playlistTitle = output.getString(
+                                            PlaylistImportWorker.O_TITLE
+                                        ) ?: phase.preview.title,
+                                        imported = output.getInt(PlaylistImportWorker.O_IMPORTED, 0),
+                                        skipped = output.getInt(PlaylistImportWorker.O_SKIPPED, 0),
+                                        failed = output.getInt(PlaylistImportWorker.O_FAILED, 0),
+                                        errors = output.getStringArray(
+                                            PlaylistImportWorker.O_ERRORS
+                                        )?.toList().orEmpty()
+                                    )
+                                )
+                            }
+                        }
+                        WorkInfo.State.FAILED -> {
+                            val error = workInfo.outputData
+                                .getString(PlaylistImportWorker.O_ERROR) ?: "Playlist import failed"
+                            _uiState.update { it.copy(phase = AddSongPhase.Error(error)) }
+                        }
+                        WorkInfo.State.CANCELLED -> {
+                            _uiState.update { it.copy(phase = AddSongPhase.Error("Import cancelled.")) }
+                        }
+                        else -> {
+                            val progress = workInfo.progress
+                            val done = progress.getInt(PlaylistImportWorker.P_DONE, 0)
+                            val total = progress.getInt(PlaylistImportWorker.P_TOTAL, 0)
+                            val current = progress.getString(PlaylistImportWorker.P_CURRENT).orEmpty()
+                            val pct = if (total > 0) (done * 100 / total).coerceIn(0, 100) else 0
+                            _uiState.update {
+                                it.copy(
+                                    phase = AddSongPhase.Downloading(
+                                        percent = pct,
+                                        stage = DownloadAudioWorker.PROGRESS_DOWNLOADING,
+                                        subtitle = current.takeIf { it.isNotEmpty() }
+                                    )
+                                )
+                            }
+                        }
+                    }
                 }
-            }.onSuccess { summary ->
-                _uiState.update {
-                    it.copy(
-                        phase = AddSongPhase.PlaylistSuccess(
-                            playlistTitle = summary.playlistTitle,
-                            imported = summary.imported,
-                            skipped = summary.skippedDuplicate,
-                            failed = summary.failed,
-                            errors = summary.errors
-                        )
-                    )
-                }
-            }.onFailure { e ->
-                _uiState.update {
-                    it.copy(phase = AddSongPhase.Error(e.message ?: "Playlist import failed."))
-                }
-            }
+                .first { it?.state?.isFinished == true }
         }
     }
 

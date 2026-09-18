@@ -26,7 +26,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Error
@@ -38,7 +37,6 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -51,15 +49,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import com.aura.music.ui.components.AmbientBackground
+import com.aura.music.ui.components.AuraTopBar
 import com.aura.music.ui.components.GlassCard
 import com.aura.music.ui.components.TagChip
+import com.aura.music.ui.theme.AuraRadius
+import com.aura.music.ui.theme.AuraSpacing
 
 @Composable
 fun BackupScreen(
@@ -124,69 +129,48 @@ fun BackupScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .windowInsetsPadding(WindowInsets.statusBars)
-                .padding(top = 0.dp, bottom = 32.dp)
+                .padding(bottom = AuraSpacing.Xxl)
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back"
-                    )
-                }
-                Text(
-                    text = "Backup",
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Black,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-            }
-
-            Text(
-                text = "Export your library with its links and tags, or restore it on any device by re-downloading from YouTube.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+            AuraTopBar(
+                title = "Backup",
+                subtitle = "Save or restore",
+                onBack = onBack
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(AuraSpacing.Sm))
 
             // ---------- Export ----------
             GlassCard(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                cornerRadius = 16.dp
+                    .padding(horizontal = AuraSpacing.Md)
+                    .animateContentSize()
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(AuraSpacing.Md)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = Icons.Default.Upload,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(AuraSpacing.Xs))
                         Text(
-                            text = "Export library",
+                            text = "Export",
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(AuraSpacing.Xs))
 
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(AuraSpacing.Xs),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         FilterChip(
                             selected = !state.selectiveExport,
                             onClick = { viewModel.setSelectiveExport(false) },
-                            label = { Text("Complete") }
+                            label = { Text("All") }
                         )
                         FilterChip(
                             selected = state.selectiveExport,
@@ -195,7 +179,7 @@ fun BackupScreen(
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(AuraSpacing.Xs))
 
                     if (state.selectiveExport) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -256,16 +240,16 @@ fun BackupScreen(
                                 }
                             }
                         }
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(AuraSpacing.Xxs))
                     } else if (tags.isNotEmpty()) {
                         Text(
-                            text = "Exclude songs with these tags:",
+                            text = "Exclude:",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(AuraSpacing.Xs))
                         LazyRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(AuraSpacing.Xs),
                             contentPadding = PaddingValues(vertical = 2.dp)
                         ) {
                             items(tags) { tag ->
@@ -280,136 +264,142 @@ fun BackupScreen(
                         }
                         if (state.excludedTags.isNotEmpty()) {
                             TextButton(onClick = viewModel::clearExcluded) {
-                                Text("Clear exclusions")
+                                Text("Clear")
                             }
                         }
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(AuraSpacing.Xxs))
                     }
 
                     Text(
                         text = if (state.selectiveExport) {
-                            "Exports exactly the $exportableCount selected songs."
+                            "$exportableCount selected"
                         } else {
-                            "Exports $exportableCount of ${songs.size} songs as JSON (links + tags included)."
+                            "$exportableCount of ${songs.size}"
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(AuraSpacing.Sm))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        horizontalArrangement = Arrangement.spacedBy(AuraSpacing.Sm)
                     ) {
                         Button(
                             onClick = viewModel::startExport,
                             enabled = canExport,
                             modifier = Modifier
                                 .weight(1f)
-                                .height(50.dp),
-                            shape = RoundedCornerShape(14.dp)
+                                .height(52.dp),
+                            shape = RoundedCornerShape(AuraRadius.Md)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Download,
                                 contentDescription = null
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Save file")
+                            Spacer(modifier = Modifier.width(AuraSpacing.Xs))
+                            Text("Save")
                         }
                         OutlinedButton(
                             onClick = viewModel::shareExport,
                             enabled = canExport,
-                            modifier = Modifier.height(50.dp),
-                            shape = RoundedCornerShape(14.dp),
-                            contentPadding = PaddingValues(horizontal = 16.dp)
+                            modifier = Modifier.height(52.dp),
+                            shape = RoundedCornerShape(AuraRadius.Md),
+                            contentPadding = PaddingValues(horizontal = AuraSpacing.Md)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Share,
-                                contentDescription = "Share backup"
+                                contentDescription = "Share"
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(AuraSpacing.Xs))
                             Text("Share")
                         }
                     }
 
-                    if (state.exportMessage != null) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = state.exportMessage!!,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (state.exportMessage == "Library exported.") {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.error
-                            }
-                        )
+                    AnimatedVisibility(
+                        visible = state.exportMessage != null,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut()
+                    ) {
+                        if (state.exportMessage != null) {
+                            Text(
+                                text = if (state.exportMessage == "Library exported.") "Saved." else state.exportMessage!!,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (state.exportMessage == "Library exported.") {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.error
+                                },
+                                modifier = Modifier.padding(top = AuraSpacing.Xs)
+                            )
+                        }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(AuraSpacing.Md))
 
             // ---------- Import ----------
             GlassCard(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                cornerRadius = 16.dp
+                    .padding(horizontal = AuraSpacing.Md)
+                    .animateContentSize()
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(AuraSpacing.Md)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = Icons.Default.FolderOpen,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(AuraSpacing.Xs))
                         Text(
-                            text = "Import library",
+                            text = "Import",
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(AuraSpacing.Xs))
 
                     Text(
-                        text = "Pick an Aura JSON backup. Songs re-download in best quality and get their tags back.",
+                        text = "Restore from JSON.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(AuraSpacing.Sm))
 
                     OutlinedButton(
                         onClick = { openLauncher.launch(arrayOf("application/json")) },
                         enabled = !state.importWorking,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(50.dp),
-                        shape = RoundedCornerShape(14.dp)
+                            .height(52.dp),
+                        shape = RoundedCornerShape(AuraRadius.Md)
                     ) {
-                        Text(if (state.importFileName != null) "Choose a different file" else "Choose JSON file")
+                        Text(if (state.importFileName != null) "Choose file" else "Choose file")
                     }
 
                     val preview = state.importPreview
                     if (preview != null) {
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(AuraSpacing.Sm))
                         Text(
-                            text = state.importFileName ?: "Backup file",
+                            text = state.importFileName ?: "Backup",
                             style = MaterialTheme.typography.titleSmall,
                             color = MaterialTheme.colorScheme.onSurface
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(AuraSpacing.Xxs))
                         Text(
-                            text = "${preview.importable} to download • " +
-                                "${preview.duplicates} already here (tags merge) • " +
+                            text = "${preview.importable} new • " +
+                                "${preview.duplicates} dupes • " +
                                 "${preview.invalid} skipped",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        (preview.invalidReasons.take(3)).forEach { reason ->
+                        (preview.invalidReasons.take(2)).forEach { reason ->
                             Text(
                                 text = reason,
                                 style = MaterialTheme.typography.bodySmall,
@@ -417,39 +407,39 @@ fun BackupScreen(
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(AuraSpacing.Sm))
 
                         Button(
                             onClick = viewModel::startImport,
                             enabled = !state.importWorking && preview.importable > 0,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(50.dp),
-                            shape = RoundedCornerShape(14.dp)
+                                .height(52.dp),
+                            shape = RoundedCornerShape(AuraRadius.Md)
                         ) {
-                            Text("Import ${preview.importable} songs")
+                            Text("Import ${preview.importable}")
                         }
                     }
 
                     if (state.importWorking) {
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(AuraSpacing.Sm))
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
+                                modifier = Modifier.size(18.dp),
                                 strokeWidth = 2.dp
                             )
-                            Spacer(modifier = Modifier.width(10.dp))
+                            Spacer(modifier = Modifier.width(AuraSpacing.Xs))
                             Text(
                                 text = if (state.importTotal > 0) {
-                                    "Song ${state.importDone + 1} of ${state.importTotal}: ${state.importCurrent}"
+                                    "${state.importDone + 1}/${state.importTotal} • ${state.importCurrent}"
                                 } else {
-                                    "Starting…"
+                                    "…"
                                 },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(AuraSpacing.Xs))
                         LinearProgressIndicator(
                             progress = {
                                 if (state.importTotal > 0) {
@@ -465,49 +455,49 @@ fun BackupScreen(
 
                     val summary = state.importSummary
                     if (summary != null) {
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(AuraSpacing.Sm))
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 imageVector = Icons.Default.CheckCircle,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(AuraSpacing.Xs))
                             Text(
-                                text = "Done: ${summary.imported} downloaded, " +
+                                text = "Done: ${summary.imported} new, " +
                                     "${summary.duplicatesMerged} merged, " +
-                                    "${summary.failed} failed.",
+                                    "${summary.failed} failed",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                         }
-                        summary.errors.take(5).forEach { err ->
+                        summary.errors.take(3).forEach { err ->
                             Text(
                                 text = err,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.error
                             )
                         }
-                        if (summary.errors.size > 5) {
+                        if (summary.errors.size > 3) {
                             Text(
-                                text = "+ ${summary.errors.size - 5} more",
+                                text = "+ ${summary.errors.size - 3} more",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         TextButton(onClick = viewModel::clearImport) {
-                            Text("Import another file")
+                            Text("Another file")
                         }
                     }
 
                     if (state.importError != null) {
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(AuraSpacing.Xs))
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 imageVector = Icons.Default.Error,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(

@@ -9,7 +9,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.aura.music.ui.theme.BadgeBest
 import com.aura.music.ui.theme.BadgeHq
 
@@ -34,12 +33,9 @@ fun QualityBadge(
     Text(
         text = label,
         color = tint,
-        fontSize = 9.sp,
-        fontWeight = FontWeight.Bold,
-        letterSpacing = 0.5.sp,
+        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
         modifier = modifier
             .border(width = 1.dp, color = tint.copy(alpha = 0.5f), shape = RoundedCornerShape(6.dp))
-            .padding(horizontal = 6.dp, vertical = 3.dp),
-        style = MaterialTheme.typography.labelSmall
+            .padding(horizontal = 6.dp, vertical = 3.dp)
     )
 }

@@ -19,25 +19,34 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.aura.music.playback.PlaybackUiState
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.aura.music.ui.player.NowPlayingViewModel
+import com.aura.music.ui.theme.AuraRadius
+import com.aura.music.ui.theme.AuraSpacing
 
 /**
  * Compact mini player: glass bar with art, single-line title,
  * play/pause + next, and a 2dp progress line. Tapping opens the full player.
+ *
+ * Collects playback state internally so parents don't recompose on every
+ * position tick — only this small subtree redraws while playing.
  */
 @Composable
 fun MiniPlayer(
-    state: PlaybackUiState,
     onOpenPlayer: () -> Unit,
     onTogglePlay: () -> Unit,
     onNext: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: NowPlayingViewModel = hiltViewModel()
 ) {
+    val state by viewModel.playbackState.collectAsStateWithLifecycle()
     val song = state.currentSong ?: return
     val fraction = if (state.durationMs > 0) {
         (state.positionMs.toFloat() / state.durationMs.toFloat()).coerceIn(0f, 1f)
@@ -46,25 +55,25 @@ fun MiniPlayer(
     GlassCard(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 8.dp)
-            .clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
+            .padding(horizontal = AuraSpacing.Sm, vertical = AuraSpacing.Xs)
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(AuraRadius.Lg))
             .clickable(onClick = onOpenPlayer),
-        cornerRadius = 16.dp
+        cornerRadius = AuraRadius.Lg
     ) {
         Column {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(10.dp),
+                    .padding(AuraSpacing.Sm),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 AlbumArt(
                     thumbnailPath = song.thumbnailPath,
                     contentDescription = song.title,
-                    size = 48.dp,
-                    cornerRadius = 10.dp
+                    size = 44.dp,
+                    cornerRadius = AuraRadius.Sm
                 )
-                Spacer(modifier = Modifier.width(10.dp))
+                Spacer(modifier = Modifier.width(AuraSpacing.Sm))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = song.title,
@@ -74,7 +83,7 @@ fun MiniPlayer(
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = song.artist ?: "Unknown artist",
+                        text = song.artist?.ifBlank { null } ?: "Unknown",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,

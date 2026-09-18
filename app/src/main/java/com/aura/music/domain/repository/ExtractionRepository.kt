@@ -43,10 +43,22 @@ data class ExtractedPlaylist(
     val isCapped: Boolean get() = totalCount > videoUrls.size
 }
 
+/** One YouTube Music search hit — streamable, downloadable, not yet saved. */
+data class YouTubeTrack(
+    val url: String,
+    val title: String,
+    val artist: String?,
+    val durationMs: Long,
+    val thumbnailUrl: String?
+)
+
 interface ExtractionRepository {
     suspend fun resolveStreamInfo(url: String): ExtractedStreamInfo
 
     suspend fun resolvePlaylist(url: String): ExtractedPlaylist
+
+    /** YouTube Music song search, best matches first (capped). */
+    suspend fun searchMusic(query: String, maxResults: Int = 25): List<YouTubeTrack>
 
     suspend fun downloadAudio(
         streamInfo: ExtractedStreamInfo,

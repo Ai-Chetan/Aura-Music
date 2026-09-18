@@ -3,6 +3,7 @@ package com.aura.music.data.db
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
@@ -47,7 +48,12 @@ interface SongDao {
     @Query("SELECT * FROM songs WHERE id IN (:songIds)")
     suspend fun getSongsByIds(songIds: List<Long>): List<SongEntity>
 
-    @Insert
+    /**
+     * IGNORE + unique sourceUrl: returns -1 when the URL already exists
+     * (lost duplicate-check race) instead of throwing — callers resolve
+     * the existing id via [getBySourceUrl].
+     */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertSong(song: SongEntity): Long
 
     @Query("UPDATE songs SET playCount = playCount + 1, lastPlayedAt = :now WHERE id = :songId")

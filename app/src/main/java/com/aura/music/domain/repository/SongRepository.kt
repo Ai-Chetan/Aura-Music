@@ -25,11 +25,39 @@ interface SongRepository {
     /**
      * Non-blocking enqueue for the progress UI: returns the
      * WorkManager id immediately; callers observe [observeDownloadWork].
+     * [initialDelaySeconds] staggers batch enqueues so dozens of simultaneous
+     * YouTube resolutions don't trip throttling (403/unavailable).
      */
-    suspend fun enqueueDownload(url: String): UUID
+    suspend fun enqueueDownload(url: String, initialDelaySeconds: Long = 0): UUID
 
     /** Live WorkInfo for a download enqueued via [enqueueDownload]. */
     fun observeDownloadWork(workId: UUID): Flow<WorkInfo?>
+
+    /**
+     * Live list of in-progress downloads (enqueued/running/blocked), newest
+     * first. Powers the "Downloading" section in Library so the user can see
+     * what is being fetched and how far along each item is.
+     */
+    fun observeActiveDownloads(): Flow<List<ActiveDownload>>
+
+    /** Cancels a queued/running download. */
+    suspend fun cancelDownload(workId: UUID)
+
+    /**
+     * Remembers a batch of starter-track downloads (Getting Started → select
+     * → Download) so Library can report per-song progress, print each
+     * failure's reason, and offer a retry. Replaces any previous batch.
+     */
+    fun trackStarterBatch(items: List<BatchItem>)
+
+    /** Live starter-batch status, or null when there is no batch to report. */
+    fun observeStarterBatch(): Flow<StarterBatchStatus?>
+
+    /** Re-enqueues every batch item that did not succeed. */
+    suspend fun retryStarterBatch()
+
+    /** Dismisses the starter-batch report card. */
+    fun clearStarterBatch()
 
     /** Resolve title/thumbnail/quality without downloading (preview card). */
     suspend fun previewFromUrl(url: String): Result<ExtractedStreamInfo>
@@ -66,16 +94,15 @@ interface SongRepository {
     suspend fun describePlaylist(url: String): Result<PlaylistPreview>
 
     /**
-     * Downloads every video in the playlist in best quality. Already-present
-     * links are skipped; when [playlistTag] is given it is applied to every
-     * imported song. Private/deleted videos fail individually without
-     * aborting the batch.
+     * Enqueues a background worker that imports the whole playlist.
+     * Because the work lives in WorkManager (not a screen's ViewModel),
+     * leaving the Download screen can't abort it halfway — every video
+     * saves independently. Observe with [observePlaylistImports].
      */
-    suspend fun importPlaylist(
-        url: String,
-        playlistTag: String?,
-        onProgress: (done: Int, total: Int, currentTitle: String) -> Unit
-    ): Result<PlaylistImportSummary>
+    suspend fun enqueuePlaylistImport(url: String, playlistTag: String?): UUID
+
+    /** Live playlist imports (unfinished only), for progress cards. */
+    fun observePlaylistImports(): Flow<List<PlaylistImportState>>
 
     fun observeMostPlayed(limit: Int): Flow<List<SongEntity>>
 
@@ -114,11 +141,58 @@ data class PlaylistPreview(
     val importable: Int get() = videoUrls.size - duplicates
 }
 
-data class PlaylistImportSummary(
+/** One in-flight playlist import, mapped from WorkManager state. */
+data class PlaylistImportState(
+    val workId: UUID,
     val playlistTitle: String,
+    val done: Int,
     val total: Int,
-    val imported: Int,
-    val skippedDuplicate: Int,
-    val failed: Int,
-    val errors: List<String>
+    val current: String
+) {
+    val percent: Int get() = if (total > 0) (done * 100 / total).coerceIn(0, 100) else 0
+}
+
+/** One in-flight audio download, mapped from WorkManager state. */
+data class ActiveDownload(
+    val workId: UUID,
+    val url: String,
+    /** Resolved video title once extraction finished; null while resolving. */
+    val title: String?,
+    val stage: String,
+    val percent: Int,
+    val bytesDone: Long?,
+    val bytesTotal: Long?
 )
+
+/** One starter-batch entry. Exactly one of [workId]/[enqueueError] is set. */
+data class BatchItem(
+    val label: String,
+    val url: String,
+    val workId: UUID?,
+    val enqueueError: String?
+)
+
+/**
+ * Seconds between starter-batch download starts. Just enough to avoid a
+ * thundering herd on enqueue — throttling itself is handled by the YtGate
+ * concurrency cap plus per-download backoff retries, so this stays small.
+ * First track always starts immediately (index 0 = no delay).
+ */
+const val STARTER_STAGGER_SECONDS = 2L
+
+/** A starter-batch song that did not make it, with the reason printed. */
+data class FailedDownload(
+    val label: String,
+    val url: String,
+    val error: String
+)
+
+/** Aggregated starter-batch report for the Library card. */
+data class StarterBatchStatus(
+    val total: Int,
+    val succeeded: Int,
+    val failed: List<FailedDownload>,
+    val finished: Boolean
+) {
+    val done: Int get() = succeeded + failed.size
+}

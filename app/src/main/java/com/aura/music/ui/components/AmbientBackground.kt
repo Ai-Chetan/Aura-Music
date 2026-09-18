@@ -30,12 +30,16 @@ import kotlin.math.sin
  * Deep dark base with a slowly drifting blue→cyan wash and a subtle
  * animated wave at the bottom. [tint] lets the Now Playing screen warm the
  * background toward the album-art dominant color (blended over 1000ms).
+ *
+ * [animate] defaults to false: the drifting wave redraws every frame, so
+ * only Now Playing opts into the motion. Everywhere else gets the same
+ * look as a static first frame, free.
  */
 @Composable
 fun AmbientBackground(
     modifier: Modifier = Modifier,
     tint: Color? = null,
-    animate: Boolean = true
+    animate: Boolean = false
 ) {
     val base = if (tint != null) {
         val target = Color(

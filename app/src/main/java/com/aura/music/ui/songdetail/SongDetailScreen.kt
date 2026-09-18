@@ -1,6 +1,5 @@
 package com.aura.music.ui.songdetail
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,13 +17,10 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -38,17 +34,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import com.aura.music.ui.components.AlbumArt
 import com.aura.music.ui.components.AmbientBackground
+import com.aura.music.ui.components.AuraTopBar
 import com.aura.music.ui.components.QualityBadge
 import com.aura.music.ui.components.TagChip
+import com.aura.music.ui.theme.AuraSpacing
 import com.aura.music.util.formatDuration
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -67,41 +67,31 @@ fun SongDetailScreen(
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .windowInsetsPadding(WindowInsets.statusBars)
-            .padding(top = 0.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onBack) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back"
-                )
-            }
-
-            Text(
-                text = "Details",
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Black,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
         val song = state.song
+        AuraTopBar(
+            title = "Details",
+            subtitle = song?.let {
+                listOfNotNull(
+                    it.audioFormat.uppercase(),
+                    it.bitrateKbps?.let { b -> "$b kbps" },
+                    it.durationMs.formatDuration()
+                ).joinToString(" • ")
+            },
+            onBack = onBack
+        )
+
+        Spacer(modifier = Modifier.height(AuraSpacing.Md))
+
         if (song == null) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(32.dp),
+                    .padding(AuraSpacing.Xxl),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Song not found.",
+                    text = "Not found",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -112,17 +102,17 @@ fun SongDetailScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = AuraSpacing.Md),
             verticalAlignment = Alignment.CenterVertically
         ) {
             AlbumArt(
                 thumbnailPath = song.thumbnailPath,
                 contentDescription = song.title,
-                size = 80.dp,
+                size = 76.dp,
                 cornerRadius = 16.dp
             )
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(AuraSpacing.Md))
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -132,54 +122,42 @@ fun SongDetailScreen(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
-                Spacer(modifier = Modifier.height(6.dp))
-                QualityBadge(codec = song.audioFormat, bitrateKbps = song.bitrateKbps)
-
                 if (!song.artist.isNullOrBlank()) {
                     Text(
                         text = song.artist,
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-
-                Text(
-                    text = song.durationMs.formatDuration() + " • " +
-                        song.audioFormat.uppercase() +
-                        if (song.bitrateKbps != null) " • ${song.bitrateKbps} kbps" else "",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Spacer(modifier = Modifier.height(AuraSpacing.Xxs))
+                QualityBadge(codec = song.audioFormat, bitrateKbps = song.bitrateKbps)
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(AuraSpacing.Xl))
 
         Text(
             text = "Tags",
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(horizontal = 16.dp)
+            modifier = Modifier.padding(horizontal = AuraSpacing.Md)
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(AuraSpacing.Xs))
 
-        if (state.songTags.isEmpty()) {
-            Text(
-                text = "No tags yet. Add tags below.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp)
-            )
-        } else {
+        AnimatedVisibility(
+            visible = state.songTags.isNotEmpty(),
+            enter = expandVertically() + fadeIn(),
+            exit = shrinkVertically() + fadeOut()
+        ) {
             FlowRow(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                    .padding(horizontal = AuraSpacing.Md),
+                horizontalArrangement = Arrangement.spacedBy(AuraSpacing.Xs),
+                verticalArrangement = Arrangement.spacedBy(AuraSpacing.Xs)
             ) {
                 state.songTags.forEach { tag ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -189,14 +167,13 @@ fun SongDetailScreen(
                             selected = true,
                             onClick = { viewModel.removeTagById(tag.id) }
                         )
-                        Spacer(modifier = Modifier.width(2.dp))
                         IconButton(
                             onClick = { viewModel.removeTagById(tag.id) },
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(24.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Close,
-                                contentDescription = "Remove tag ${tag.name}",
+                                contentDescription = "Remove ${tag.name}",
                                 modifier = Modifier.size(14.dp),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -205,25 +182,33 @@ fun SongDetailScreen(
                 }
             }
         }
+        if (state.songTags.isEmpty()) {
+            Text(
+                text = "No tags yet",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = AuraSpacing.Md)
+            )
+        }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(AuraSpacing.Md))
 
         if (state.availableTags.isNotEmpty()) {
             Text(
-                text = "Available tags",
+                text = "Add",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp)
+                modifier = Modifier.padding(horizontal = AuraSpacing.Md)
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(AuraSpacing.Xs))
 
             FlowRow(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                    .padding(horizontal = AuraSpacing.Md),
+                horizontalArrangement = Arrangement.spacedBy(AuraSpacing.Xs),
+                verticalArrangement = Arrangement.spacedBy(AuraSpacing.Xs)
             ) {
                 state.availableTags.forEach { tag ->
                     TagChip(
@@ -235,33 +220,33 @@ fun SongDetailScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(AuraSpacing.Md))
         }
 
         Text(
-            text = "Create new tag",
+            text = "New tag",
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 16.dp)
+            modifier = Modifier.padding(horizontal = AuraSpacing.Md)
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(AuraSpacing.Xs))
 
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = AuraSpacing.Md),
             verticalAlignment = Alignment.CenterVertically
         ) {
             OutlinedTextField(
                 value = newTagName,
                 onValueChange = { newTagName = it },
                 modifier = Modifier.weight(1f),
-                placeholder = { Text("e.g. sad, party, english") },
+                placeholder = { Text("Tag name") },
                 singleLine = true
             )
 
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(AuraSpacing.Xs))
 
             TextButton(
                 onClick = {
@@ -278,7 +263,7 @@ fun SongDetailScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(AuraSpacing.Xxl))
     }
     }
 }

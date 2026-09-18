@@ -18,6 +18,9 @@ interface TagDao {
     @Query("SELECT * FROM tags WHERE name = :name")
     suspend fun getTagByName(name: String): TagEntity?
 
+    @Query("SELECT COUNT(*) FROM tags")
+    suspend fun getTagCount(): Int
+
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertTag(tag: TagEntity): Long
 

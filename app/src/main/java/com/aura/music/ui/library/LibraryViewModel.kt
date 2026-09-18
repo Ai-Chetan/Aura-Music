@@ -5,7 +5,10 @@ import androidx.lifecycle.viewModelScope
 import com.aura.music.data.db.SongEntity
 import com.aura.music.data.db.SongWithTags
 import com.aura.music.data.db.TagEntity
+import com.aura.music.domain.repository.ActiveDownload
+import com.aura.music.domain.repository.PlaylistImportState
 import com.aura.music.domain.repository.SongRepository
+import com.aura.music.domain.repository.StarterBatchStatus
 import com.aura.music.domain.repository.TagRepository
 import com.aura.music.playback.PlaybackController
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,6 +19,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -28,8 +32,20 @@ data class LibraryUiState(
     /** Tags whose songs are hidden from the list AND never queued for playback. */
     val excludedTagNames: Set<String> = emptySet(),
     val matchAll: Boolean = true,
-    val searchQuery: String = ""
+    val searchQuery: String = "",
+    val sortMode: LibrarySortMode = LibrarySortMode.RECENT
 )
+
+/** Library ordering. RECENT (newest first) is the default. */
+enum class LibrarySortMode(val label: String) {
+    RECENT("Recently added"),
+    OLDEST("Oldest first"),
+    TITLE_ASC("Title A–Z"),
+    TITLE_DESC("Title Z–A"),
+    ARTIST_ASC("Artist A–Z"),
+    DURATION_LONG("Longest first"),
+    DURATION_SHORT("Shortest first")
+}
 
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
@@ -42,6 +58,48 @@ class LibraryViewModel @Inject constructor(
     private val excludedTagNames = MutableStateFlow<Set<String>>(emptySet())
     private val matchAll = MutableStateFlow(true)
     private val searchQuery = MutableStateFlow("")
+    private val sortMode = MutableStateFlow(LibrarySortMode.RECENT)
+
+    /** Live in-progress downloads (starter tracks, pasted links). */
+    val activeDownloads: StateFlow<List<ActiveDownload>> =
+        songRepository.observeActiveDownloads()
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = emptyList()
+            )
+
+    /** Live playlist imports (keep running even if the Add screen is gone). */
+    val playlistImports: StateFlow<List<PlaylistImportState>> =
+        songRepository.observePlaylistImports()
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = emptyList()
+            )
+
+    /** Starter-batch report (Getting Started selections), if any. */
+    val starterBatch: StateFlow<StarterBatchStatus?> =
+        songRepository.observeStarterBatch()
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = null
+            )
+
+    fun retryStarterBatch() {
+        viewModelScope.launch {
+            try {
+                songRepository.retryStarterBatch()
+            } catch (e: Exception) {
+                _messages.emit("Couldn't retry: ${e.message}")
+            }
+        }
+    }
+
+    fun dismissStarterBatch() {
+        songRepository.clearStarterBatch()
+    }
 
     /** One-shot UI messages ("Queued …", "Deleted …"). */
     private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 4)
@@ -53,7 +111,8 @@ class LibraryViewModel @Inject constructor(
         selectedTagNames,
         excludedTagNames,
         matchAll,
-        searchQuery
+        searchQuery,
+        sortMode
     ) { args ->
         @Suppress("UNCHECKED_CAST")
         val songs = args[0] as List<SongWithTags>
@@ -62,6 +121,7 @@ class LibraryViewModel @Inject constructor(
         val excluded = args[3] as Set<String>
         val matchAllValue = args[4] as Boolean
         val query = args[5] as String
+        val sort = args[6] as LibrarySortMode
         val normalizedQuery = query.trim()
 
         val filteredSongs = songs.filter { item ->
@@ -81,7 +141,7 @@ class LibraryViewModel @Inject constructor(
                 item.song.artist?.contains(normalizedQuery, ignoreCase = true) == true
 
             matchesTags && matchesQuery
-        }
+        }.let { sortSongs(it, sort) }
 
         LibraryUiState(
             songs = filteredSongs,
@@ -89,7 +149,8 @@ class LibraryViewModel @Inject constructor(
             selectedTagNames = selected,
             excludedTagNames = excluded,
             matchAll = matchAllValue,
-            searchQuery = query
+            searchQuery = query,
+            sortMode = sort
         )
     }.stateIn(
         scope = viewModelScope,
@@ -128,7 +189,34 @@ class LibraryViewModel @Inject constructor(
         searchQuery.value = value
     }
 
+    fun setSortMode(mode: LibrarySortMode) {
+        sortMode.value = mode
+    }
+
+    fun cancelDownload(workId: java.util.UUID) {
+        viewModelScope.launch {
+            try {
+                songRepository.cancelDownload(workId)
+            } catch (e: Exception) {
+                _messages.emit("Couldn't cancel download")
+            }
+        }
+    }
+
     val playbackState = playbackController.playbackState
+
+    /**
+     * Playing-song id only — row highlight flags collect this instead of the
+     * full playback state, so the 500ms position ticks don't recompose the
+     * whole list twice a second.
+     */
+    val currentTrackId: StateFlow<Long?> = playbackController.playbackState
+        .map { it.currentSong?.id }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = null
+        )
 
     fun playSong(songWithTags: SongWithTags) {
         val songs = uiState.value.songs.map { it.song }
@@ -157,5 +245,18 @@ class LibraryViewModel @Inject constructor(
                 _messages.emit("Couldn't delete: ${e.message}")
             }
         }
+    }
+
+    private fun sortSongs(
+        songs: List<SongWithTags>,
+        sort: LibrarySortMode
+    ): List<SongWithTags> = when (sort) {
+        LibrarySortMode.RECENT -> songs.sortedByDescending { it.song.dateAdded }
+        LibrarySortMode.OLDEST -> songs.sortedBy { it.song.dateAdded }
+        LibrarySortMode.TITLE_ASC -> songs.sortedBy { it.song.title.lowercase() }
+        LibrarySortMode.TITLE_DESC -> songs.sortedByDescending { it.song.title.lowercase() }
+        LibrarySortMode.ARTIST_ASC -> songs.sortedBy { (it.song.artist ?: "").lowercase() }
+        LibrarySortMode.DURATION_LONG -> songs.sortedByDescending { it.song.durationMs }
+        LibrarySortMode.DURATION_SHORT -> songs.sortedBy { it.song.durationMs }
     }
 }

@@ -3,15 +3,22 @@
 ## Done (shipped)
 
 - Add song from YouTube URL (single video, best-available audio + metadata)
-- Playlist import (preview, duplicate detection, optional playlist-title tag, per-video failure isolation, 50-song cap)
+- Playlist import (preview, duplicate detection, optional playlist-title tag, per-video failure isolation, 50-song cap; dedicated background worker survives navigation)
 - Tagging (create/assign/remove, many-to-many, per-song editor)
 - Filter/browse library by tag(s), AND/OR toggle
 - Full transport: play/pause/seek/next/prev, background playback
-- Queue management (play queue, play next, add to end, play-at-index, remove, reorder)
+- Queue management (play queue, play next, add to end, play-at-index, remove, reorder; index-mismatch + sheet-height fixes)
 - Shuffle + repeat (off/one/all)
 - Media notification with working transport controls
 - Lock-screen media panel with working transport controls
 - Local search (title/artist)
+- YouTube Music search with instant streaming or save-to-vault
+- Combined Add section (Search + Paste link under one toggle)
+- Skippable Getting Started guide with coach tips + starter-track batch downloads
+- Library sort modes (recent/oldest/title/artist/duration) with snap-to-top + batched rendering
+- Live download queue (collapsible overall-% card, per-song progress, cancel, starter-batch failure report with retry)
+- YouTube throttling hardening (concurrency gate, backoff retries, staggered batches, friendly errors)
+- Swipe artwork on Now Playing to change tracks
 - Custom futuristic UI theme (ambient background, reactive waveform, glass cards, chips, badges)
 - Library backup/export + import (JSON, tag-exclusion or explicit selection, tag merge on restore)
 - Most/recently-played tracking (`playCount` / `lastPlayedAt` collected in DB)

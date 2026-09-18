@@ -56,15 +56,15 @@ Plain `MediaPlayer` does not give you rich notification/lock-screen controls, qu
 
 ## 4. Extraction pipeline (how a pasted link becomes a saved file)
 
-1. **Input**: user pastes a YouTube URL (video or `/playlist` link).
-2. **Validate + canonicalise**: `YoutubeUrls` accepts watch, `youtu.be`, shorts, `music.youtube`, embed, `/live/`, and `/playlist?list=` links; everything is canonicalised to `watch?v=<id>` / `playlist?list=<id>` for duplicate detection and storage. A `watch?v=…&list=…` link (shared from inside a playlist) resolves as its single video, and the UI offers the whole playlist as a one-tap alternative.
-3. **Resolve**: `NewPipeExtractionRepository` fetches `StreamInfo` (with 3-attempt retry), including available `AudioStream`s.
+1. **Input**: a YouTube Music search hit, or a pasted YouTube URL (video or `/playlist` link).
+2. **Validate + canonicalise**: `YoutubeUrls` accepts watch, `youtu.be`, shorts, `music.youtube`, embed, `/live/`, and `/playlist?list=` links; everything is canonicalised to `watch?v=<id>` / `playlist?list=<id>` for duplicate detection and storage. A `watch?v=…&list=…` link (shared from inside a playlist) resolves as its single video, and the UI offers the whole playlist as a pinned one-tap alternative.
+3. **Resolve**: `NewPipeExtractionRepository` fetches `StreamInfo` through the shared politeness layer — max 3 concurrent YouTube operations (`YtGate`) plus exponential-backoff retries with jitter (`ytRetry`), so bursts don't trip 400/403/429 throttling. Search uses the YouTube Music song filter.
 4. **Select best stream**: highest-bitrate Opus first, then AAC, then highest of anything else. No transcoding — bytes are stored as-is.
-5. **Preview**: title, uploader, duration, thumbnail and quality badge are shown before download; duplicates already in the library are reported immediately.
-6. **Download**: a WorkManager `CoroutineWorker` streams the audio URL to `getExternalFilesDir("songs")` via OkHttp with progress callbacks.
+5. **Preview**: title, uploader, duration, thumbnail and quality badge are shown before download; duplicates already in the library are reported immediately. Search hits can alternatively stream instantly (transient queue entry, never saved).
+6. **Download**: a WorkManager `CoroutineWorker` streams the audio URL to `getExternalFilesDir("songs")` via OkHttp (ranged requests) with progress callbacks; shared `SongFileDownloader` keeps single and playlist paths identical.
 7. **Artwork**: highest-resolution thumbnail is downloaded and cached locally.
-8. **Insert into Room**: a `SongEntity` pointing at the local file path, plus tags (user-added, or playlist-title tag on batch import).
-9. **Playlist path**: playlist URLs resolve up to 50 video URLs (paginated); each is downloaded individually so one private/deleted video never aborts the batch.
+8. **Insert into Room**: a `SongEntity` pointing at the local file path, plus tags (user-added, or playlist-title tag on batch import). Inserts use `IGNORE` on the unique `sourceUrl` index so concurrent duplicates resolve instead of crashing.
+9. **Playlist path**: playlist URLs enqueue a dedicated `PlaylistImportWorker` (up to 50 videos, paginated) that survives navigation and process trims; each video downloads individually so one private/deleted video never aborts the batch. Starter-track batches are staggered, tracked per-song (`trackStarterBatch`), and report every failure's reason with retry.
 
 ## 5. Module / package structure (actual)
 
@@ -72,23 +72,28 @@ Plain `MediaPlayer` does not give you rich notification/lock-screen controls, qu
 app/src/main/java/com/aura/music/
 ├─ AuraApp.kt / MainActivity.kt
 ├─ ui/
-│   ├─ theme/           (colors, typography, Material3 color scheme)
-│   ├─ library/         (song list, tag filter chips, search)
+│   ├─ theme/           (colors, typography, Material3 color scheme, tokens)
+│   ├─ library/         (song list, tag filter chips, search, sort, download queue)
 │   ├─ player/          (now-playing screen + queue sheet)
-│   ├─ addsong/         (paste-link screen, preview, single + playlist progress)
+│   ├─ add/             (combined Search / Paste-link section)
+│   ├─ addsong/         (paste-link panel: preview, single + playlist progress)
+│   ├─ search/          (YouTube Music search panel: stream or save)
+│   ├─ onboarding/      (first-launch guide + starter tracks)
 │   ├─ songdetail/      (song page, tag editor)
 │   ├─ backup/          (JSON export/import UI)
-│   ├─ navigation/      (NavHost, bottom tabs, MiniPlayer shell, notch waveform)
+│   ├─ navigation/      (NavHost, bottom tabs, MiniPlayer shell)
 │   └─ components/      (AlbumArt, AmbientBackground, AudioReactiveWaveform,
-│                        GlassCard, MiniPlayer, QualityBadge, SongRow, TagChip)
+│                        GlassCard, MiniPlayer, QualityBadge, SongRow, TagChip,
+│                        splash, shared chrome)
 ├─ domain/
 │   └─ repository/      (SongRepository, TagRepository, ExtractionRepository interfaces)
 ├─ data/
-│   ├─ db/              (Room entities, DAOs, AppDatabase)
-│   ├─ extraction/      (NewPipe wrapper, OkHttp downloader shim)
-│   ├─ download/        (WorkManager DownloadAudioWorker)
+│   ├─ db/              (Room entities, DAOs, AppDatabase v2 + migration)
+│   ├─ extraction/      (NewPipe wrapper, OkHttp downloader shim, YtGate + ytRetry)
+│   ├─ download/        (DownloadAudioWorker, PlaylistImportWorker, SongFileDownloader)
 │   ├─ repository/      (repository implementations)
 │   ├─ backup/          (LibraryBackup JSON codec)
+│   ├─ prefs/           (DataStore onboarding flag)
 │   └─ DefaultTagSeeder.kt (starter tags on first launch)
 ├─ playback/
 │   ├─ PlaybackService.kt            (MediaSessionService + ExoPlayer)
@@ -109,8 +114,9 @@ app/src/main/java/com/aura/music/
 ## 7. UI/design direction
 
 - Dark, near-black base (`#0C131B`) with a blue → cyan signature gradient used on interactive elements and the now-playing background.
-- `AmbientBackground`: slowly drifting gradient wash + bottom wave; tints toward the album-art color on Now Playing.
-- `AudioReactiveWaveform`: live `Visualizer` FFT buckets rendered as bars in the status-bar zone and behind the player.
+- `AmbientBackground`: gradient wash + bottom wave; animated on Now Playing only, static elsewhere (per-frame redraws are gated by the `animate` flag).
+- `AudioReactiveWaveform`: live `Visualizer` FFT buckets rendered as bars; collects its flow inside the Canvas node so 10Hz emissions don't recompose the player screen.
+- Playback-driven UI collects track-only slices (`currentTrack`) where position isn't needed, so the 500ms progress ticks don't recompose the nav shell or library rows.
 - Frosted-glass cards (`GlassCard`), pill-shaped per-tag color chips (`TagChip`), quality badges (`HQ • BEST` amber / `HQ` green).
 - Design tokens live in `ui/theme/` — reuse them instead of hardcoding values per screen.
 

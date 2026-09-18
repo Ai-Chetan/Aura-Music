@@ -106,9 +106,13 @@ class Media3PlaybackController @Inject constructor(
         val player = controller ?: return
 
         val queueSize = player.mediaItemCount
+        // Never drop items here: the sheet's row indices must match the
+        // player 1:1, otherwise remove/play/reorder hits the wrong song.
+        // Cache misses (e.g. process restart) fall back to session metadata.
         val queue = (0 until queueSize).mapNotNull { index ->
             val mediaId = player.getMediaItemAt(index).mediaId.toLongOrNull()
             mediaId?.let { songCache[it] }
+                ?: songFromMetadata(player, index, mediaId)
         }
 
         val currentIndex = player.currentMediaItemIndex
@@ -121,24 +125,9 @@ class Media3PlaybackController @Inject constructor(
             // the service kept playing), show the session metadata instead of
             // "No song playing" with a moving seek bar.
             ?: currentMediaId?.let { id ->
-                val meta = if (currentIndex in 0 until queueSize) {
-                    player.getMediaItemAt(currentIndex).mediaMetadata
+                if (currentIndex in 0 until queueSize) {
+                    songFromMetadata(player, currentIndex, id)
                 } else null
-                SongEntity(
-                    id = id,
-                    title = meta?.title?.toString()?.takeIf { it.isNotBlank() }
-                        ?: "Unknown title",
-                    artist = meta?.artist?.toString(),
-                    sourceUrl = "",
-                    sourcePlatform = "youtube",
-                    localFilePath = "",
-                    thumbnailPath = meta?.artworkUri?.path,
-                    durationMs = player.duration.coerceAtLeast(0L),
-                    bitrateKbps = null,
-                    audioFormat = "",
-                    isLossless = false,
-                    dateAdded = 0L
-                )
             }
 
         val repeatMode = when (player.repeatMode) {
@@ -184,6 +173,33 @@ class Media3PlaybackController @Inject constructor(
         positionUpdateJob = null
     }
 
+    /**
+     * Best-effort SongEntity for a player item with no cache entry (e.g.
+     * after a process restart while the service kept playing). Keeps the
+     * queue list 1:1 with the player so row indices stay valid.
+     */
+    private fun songFromMetadata(player: Player, index: Int, id: Long?): SongEntity? {
+        if (id == null) return null
+        val meta = player.getMediaItemAt(index).mediaMetadata
+        return SongEntity(
+            id = id,
+            title = meta?.title?.toString()?.takeIf { it.isNotBlank() }
+                ?: "Unknown title",
+            artist = meta?.artist?.toString(),
+            sourceUrl = "",
+            sourcePlatform = "youtube",
+            localFilePath = "",
+            thumbnailPath = meta?.artworkUri?.path,
+            durationMs = if (index == player.currentMediaItemIndex) {
+                player.duration.coerceAtLeast(0L)
+            } else 0L,
+            bitrateKbps = null,
+            audioFormat = "",
+            isLossless = false,
+            dateAdded = 0L
+        )
+    }
+
     private fun SongEntity.toMediaItem(): MediaItem {
         val uri = try {
             val f = java.io.File(localFilePath)
@@ -224,6 +240,9 @@ class Media3PlaybackController @Inject constructor(
             return
         }
 
+        // Keep the cache in sync: updateState() maps player items through it,
+        // and any miss would shift the sheet's indices off the player's.
+        songs.forEach { songCache[it.id] = it }
         val mediaItems = songs.map { it.toMediaItem() }
         player.setMediaItems(mediaItems, startIndex, 0L)
         player.prepare()

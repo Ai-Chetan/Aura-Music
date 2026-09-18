@@ -88,7 +88,22 @@ How Aura was built — and how to extend it. Each phase builds on the previous o
 
 ---
 
-## Phase 7 — Next (Spotify parity & hardening)
+## Phase 7 — Discovery, onboarding & hardening ✅ done
+
+- Combined **Add section**: YouTube Music search (stream instantly or save) + paste-link panels under one segmented toggle with shared chrome.
+- Skippable **Getting Started guide**: floating coach tips over the UI plus multi-select starter tracks that download in the background with per-song error reporting + retry.
+- **Live download queue** in Library: collapsible overall-% card, per-song/playlist progress, cancel; batched list rendering (20-row windows) for large vaults.
+- **Library sort modes** (recent/oldest/title/artist/duration) with snap-to-top; swipe artwork on Now Playing to change tracks; fixed-height queue sheet; queue index-mismatch fix.
+- **Navigation-proof playlist imports** via dedicated `PlaylistImportWorker` (shared `SongFileDownloader`, per-video failure isolation, live progress).
+- **Throttling hardening**: `YtGate` (max 3 concurrent YouTube ops), `ytRetry` backoff+jitter everywhere, staggered batch starts, friendly error messages.
+- **DB v2**: unique `sourceUrl` index + non-destructive migration; duplicate-proof inserts.
+- **Perf passes**: track-only playback slices (no 500ms recompose storms), waveform redraws scoped to its Canvas, backup I/O off Main, ambient animation on Now Playing only.
+
+**Done when**: search → stream/save works; a 40-track starter batch completes in the background with every failure explained; leaving the Add screen mid-playlist loses nothing.
+
+---
+
+## Phase 8 — Next (Spotify parity & hardening)
 
 Independently testable, in suggested order:
 

@@ -3,16 +3,16 @@ package com.aura.music.ui.navigation
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -22,10 +22,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
@@ -35,20 +32,23 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.aura.music.ui.addsong.AddSongScreen
+import com.aura.music.ui.add.AddScreen
 import com.aura.music.ui.backup.BackupScreen
-import com.aura.music.ui.components.AudioReactiveWaveform
 import com.aura.music.ui.components.MiniPlayer
 import com.aura.music.ui.library.LibraryScreen
+import com.aura.music.ui.onboarding.OnboardingScreen
+import com.aura.music.ui.onboarding.OnboardingViewModel
 import com.aura.music.ui.player.NowPlayingScreen
 import com.aura.music.ui.player.NowPlayingViewModel
 import com.aura.music.ui.songdetail.SongDetailScreen
 
 object Routes {
     const val LIBRARY = "library"
-    const val ADD_SONG = "add_song"
+    const val ADD = "add"
+    const val ADD_PATTERN = "add?initialUrl={initialUrl}"
     const val NOW_PLAYING = "now_playing"
     const val BACKUP = "backup"
+    const val ONBOARDING = "onboarding"
     const val SONG_DETAIL = "song/{songId}"
 
     fun songDetail(songId: Long): String = "song/$songId"
@@ -58,16 +58,27 @@ object Routes {
 fun AuraNavHost(
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
-    playerViewModel: NowPlayingViewModel = hiltViewModel()
+    playerViewModel: NowPlayingViewModel = hiltViewModel(),
+    onboardingViewModel: OnboardingViewModel = hiltViewModel()
 ) {
-    val playback by playerViewModel.playbackState.collectAsStateWithLifecycle()
-    val waveform by playerViewModel.waveform.collectAsStateWithLifecycle()
+    val currentTrack by playerViewModel.currentTrack.collectAsStateWithLifecycle()
+    val onboardingCompleted by onboardingViewModel.onboardingCompleted.collectAsStateWithLifecycle()
     val backStack by navController.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
 
-    // Full-screen player has its own chrome; every other destination gets the
-    // standard app shell: content + MiniPlayer + bottom tabs.
-    val showShell = currentRoute != Routes.NOW_PLAYING
+    // Full-screen player + onboarding have their own chrome; every other
+    // destination gets the standard app shell: content + MiniPlayer + tabs.
+    val showShell = currentRoute != Routes.NOW_PLAYING &&
+        currentRoute != Routes.ONBOARDING
+
+    // DataStore loads async — hold the graph until we know whether to
+    // start on onboarding (first launch) or library.
+    if (onboardingCompleted == null) {
+        Box(modifier = modifier.fillMaxSize())
+        return
+    }
+    val startDestination =
+        if (onboardingCompleted == false) Routes.ONBOARDING else Routes.LIBRARY
 
     Box(modifier = modifier.fillMaxSize()) {
         Scaffold(
@@ -76,13 +87,18 @@ fun AuraNavHost(
         bottomBar = {
             if (!showShell) return@Scaffold
             Column {
-                if (playback.currentSong != null) {
-                    MiniPlayer(
-                        state = playback,
-                        onOpenPlayer = { navController.navigate(Routes.NOW_PLAYING) },
-                        onTogglePlay = playerViewModel::togglePlayPause,
-                        onNext = playerViewModel::skipToNext
-                    )
+                AnimatedVisibility(
+                    visible = currentTrack != null,
+                    enter = slideInVertically(initialOffsetY = { it / 2 }) + fadeIn(),
+                    exit = slideOutVertically(targetOffsetY = { it / 2 }) + fadeOut()
+                ) {
+                    if (currentTrack != null) {
+                        MiniPlayer(
+                            onOpenPlayer = { navController.navigate(Routes.NOW_PLAYING) },
+                            onTogglePlay = playerViewModel::togglePlayPause,
+                            onNext = playerViewModel::skipToNext
+                        )
+                    }
                 }
                 NavigationBar(
                     containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)
@@ -105,19 +121,20 @@ fun AuraNavHost(
                         label = { Text("Library") }
                     )
                     NavigationBarItem(
-                        selected = currentRoute == Routes.ADD_SONG,
+                        selected = currentRoute == Routes.ADD ||
+                            (currentRoute?.startsWith("add") == true),
                         onClick = {
-                            navController.navigate(Routes.ADD_SONG) {
+                            navController.navigate(Routes.ADD) {
                                 launchSingleTop = true
                             }
                         },
                         icon = {
                             Icon(
-                                imageVector = Icons.Default.CloudDownload,
-                                contentDescription = "Download"
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "Add"
                             )
                         },
-                        label = { Text("Download") }
+                        label = { Text("Add") }
                     )
                 }
             }
@@ -126,21 +143,73 @@ fun AuraNavHost(
         Box(modifier = Modifier.padding(innerPadding)) {
             NavHost(
                 navController = navController,
-                startDestination = Routes.LIBRARY
+                startDestination = startDestination,
+                enterTransition = { slideInHorizontally(initialOffsetX = { it / 6 }) + fadeIn() },
+                exitTransition = { slideOutHorizontally(targetOffsetX = { -it / 6 }) + fadeOut() },
+                popEnterTransition = { slideInHorizontally(initialOffsetX = { -it / 6 }) + fadeIn() },
+                popExitTransition = { slideOutHorizontally(targetOffsetX = { it / 6 }) + fadeOut() }
             ) {
+        composable(Routes.ONBOARDING) {
+            OnboardingScreen(
+                onFinish = {
+                    onboardingViewModel.complete()
+                    navController.navigate(Routes.LIBRARY) {
+                        popUpTo(Routes.ONBOARDING) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
+                onDownloadSelected = { tracks ->
+                    onboardingViewModel.downloadStarterTracks(tracks)
+                    onboardingViewModel.complete()
+                    navController.navigate(Routes.LIBRARY) {
+                        popUpTo(Routes.ONBOARDING) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
+            )
+        }
+
         composable(Routes.LIBRARY) {
             LibraryScreen(
                 onSongClick = { songId ->
                     navController.navigate(Routes.songDetail(songId))
                 },
                 onAddSongClick = {
-                    navController.navigate(Routes.ADD_SONG)
+                    navController.navigate(Routes.ADD)
                 },
                 onPlaySong = {
                     navController.navigate(Routes.NOW_PLAYING)
                 },
                 onBackupClick = {
                     navController.navigate(Routes.BACKUP)
+                },
+                onGuideClick = {
+                    navController.navigate(Routes.ONBOARDING)
+                }
+            )
+        }
+
+        composable(
+            route = Routes.ADD_PATTERN,
+            arguments = listOf(
+                navArgument("initialUrl") {
+                    type = NavType.StringType
+                    defaultValue = ""
+                    nullable = true
+                }
+            )
+        ) { backStackEntry ->
+            AddScreen(
+                initialUrl = backStackEntry.arguments?.getString("initialUrl"),
+                onSongAdded = { songId ->
+                    navController.popBackStack(Routes.LIBRARY, inclusive = false)
+                    navController.navigate(Routes.songDetail(songId))
+                },
+                onPlaylistDone = {
+                    navController.popBackStack(Routes.LIBRARY, inclusive = false)
+                },
+                onPlayResult = {
+                    navController.navigate(Routes.NOW_PLAYING)
                 }
             )
         }
@@ -157,19 +226,6 @@ fun AuraNavHost(
             )
         }
 
-        composable(Routes.ADD_SONG) {
-            AddSongScreen(
-                onBack = { navController.popBackStack() },
-                onSongAdded = { songId ->
-                    navController.popBackStack(Routes.LIBRARY, inclusive = false)
-                    navController.navigate(Routes.songDetail(songId))
-                },
-                onPlaylistDone = {
-                    navController.popBackStack(Routes.LIBRARY, inclusive = false)
-                }
-            )
-        }
-
         composable(
             route = Routes.SONG_DETAIL,
             arguments = listOf(
@@ -183,28 +239,5 @@ fun AuraNavHost(
             }
         }
     }
-
-        // Live waveform glowing strictly inside the status-bar / notch zone
-        // while music plays — never spilling into app content. No touch
-        // handling — taps pass straight through.
-        val density = LocalDensity.current
-        val notchHeight = with(density) {
-            WindowInsets.statusBars.getTop(density).toDp()
-        }
-        AnimatedVisibility(
-            visible = playback.isPlaying && showShell,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier.align(Alignment.TopCenter)
-        ) {
-            AudioReactiveWaveform(
-                magnitudes = waveform,
-                isPlaying = true,
-                barCount = 64,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(notchHeight)
-            )
-        }
     }
 }

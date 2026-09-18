@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -36,11 +37,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.aura.music.data.db.SongWithTags
+import com.aura.music.ui.theme.AuraRadius
+import com.aura.music.ui.theme.AuraSpacing
 import com.aura.music.util.formatDuration
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -68,14 +69,14 @@ fun SongRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 4.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .padding(horizontal = AuraSpacing.Sm, vertical = AuraSpacing.Xxs)
+            .clip(RoundedCornerShape(AuraRadius.Md))
             .then(
                 if (isPlaying) {
                     Modifier.border(
                         width = 1.dp,
                         color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(AuraRadius.Md)
                     )
                 } else Modifier
             )
@@ -90,41 +91,42 @@ fun SongRow(
                 onClick = onClick,
                 onLongClick = onLongClick
             )
-            .padding(horizontal = 10.dp, vertical = 8.dp),
+            .padding(horizontal = AuraSpacing.Sm, vertical = AuraSpacing.Xs),
         verticalAlignment = Alignment.CenterVertically
     ) {
         AlbumArt(
             thumbnailPath = song.thumbnailPath,
             contentDescription = song.title,
             size = 56.dp,
-            cornerRadius = 10.dp
+            cornerRadius = AuraRadius.Sm
         )
 
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(AuraSpacing.Sm))
 
         Column(
             modifier = Modifier.weight(1f)
         ) {
             Text(
                 text = song.title,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.bodyMedium,
                 color = titleColor,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
 
             Text(
-                text = song.artist ?: "Unknown artist",
-                fontSize = 13.sp,
+                text = song.artist?.ifBlank { null } ?: "Unknown",
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
 
             if (songWithTags.tags.isNotEmpty()) {
-                Spacer(modifier = Modifier.width(4.dp))
-
+                // 12dp above the chips = 12dp below them (8dp row padding
+                // + 4dp outer gap to the next row), so the tags sit evenly
+                // between the artist line and the next song.
+                Spacer(modifier = Modifier.height(AuraSpacing.Sm))
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
@@ -140,12 +142,11 @@ fun SongRow(
             }
         }
 
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(AuraSpacing.Xs))
 
         Text(
             text = song.durationMs.formatDuration(),
-            fontSize = 13.sp,
-            fontFamily = FontFamily.Monospace,
+            style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
@@ -231,9 +232,9 @@ fun SongRow(
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text("Delete this song?") },
+            title = { Text("Delete?") },
             text = {
-                Text("\"${song.title}\" and its downloaded file will be removed from this device.")
+                Text("“${song.title}” will be removed from this device.")
             },
             confirmButton = {
                 TextButton(
@@ -247,7 +248,7 @@ fun SongRow(
             },
             dismissButton = {
                 TextButton(onClick = { confirmDelete = false }) {
-                    Text("Cancel")
+                    Text("Keep")
                 }
             }
         )

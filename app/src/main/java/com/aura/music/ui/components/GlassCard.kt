@@ -11,6 +11,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.aura.music.ui.theme.AuraRadius
 import com.aura.music.ui.theme.GlassBorder
 import com.aura.music.ui.theme.GlassFill
 
@@ -22,7 +23,7 @@ import com.aura.music.ui.theme.GlassFill
 @Composable
 fun GlassCard(
     modifier: Modifier = Modifier,
-    cornerRadius: Dp = 16.dp,
+    cornerRadius: Dp = AuraRadius.Lg,
     fill: Color = GlassFill,
     content: @Composable BoxScope.() -> Unit
 ) {

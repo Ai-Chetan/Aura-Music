@@ -5,18 +5,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.CloudDownload
@@ -38,79 +35,37 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
-import com.aura.music.ui.components.AmbientBackground
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateContentSize
+import com.aura.music.ui.components.AlbumArt
 import com.aura.music.ui.components.GlassCard
 import com.aura.music.ui.components.QualityBadge
+import com.aura.music.ui.theme.AuraRadius
+import com.aura.music.ui.theme.AuraSpacing
 import com.aura.music.util.formatDuration
 
 @Composable
-fun AddSongScreen(
-    onBack: () -> Unit,
+fun AddSongPanel(
     onSongAdded: (Long) -> Unit,
-    onPlaylistDone: () -> Unit = onBack,
-    viewModel: AddSongViewModel = hiltViewModel()
+    onPlaylistDone: () -> Unit,
+    viewModel: AddSongViewModel = hiltViewModel(),
+    modifier: Modifier = Modifier
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        AmbientBackground()
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .windowInsetsPadding(WindowInsets.statusBars)
-                .padding(top = 0.dp)
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back"
-                    )
-                }
-
-                Text(
-                    text = "Download",
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Black,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-            }
-
-            Text(
-                text = "YouTube only — best available quality, saved losslessly (no re-encode).",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-            )
-            Text(
-                text = "Single videos, Shorts, or whole playlists (up to 50 songs) — paste any YouTube link.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp)
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
+    Column(modifier = modifier.fillMaxWidth()) {
             OutlinedTextField(
                 value = state.url,
                 onValueChange = viewModel::setUrl,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                placeholder = { Text("Paste any YouTube video or playlist link") },
+                    .padding(horizontal = AuraSpacing.Md),
+                placeholder = { Text("YouTube link") },
                 singleLine = true,
                 enabled = state.phase !is AddSongPhase.Downloading,
                 trailingIcon = {
@@ -123,27 +78,27 @@ fun AddSongScreen(
                         }
                     }
                 },
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(AuraRadius.Lg)
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(AuraSpacing.Sm))
 
             val ctaLabel = when (val phase = state.phase) {
                 is AddSongPhase.Idle,
                 is AddSongPhase.Error,
-                is AddSongPhase.Resolving -> if (state.isPlaylistUrl) "Fetch playlist" else "Fetch preview"
-                is AddSongPhase.Preview -> "Download best quality"
-                is AddSongPhase.PreviewPlaylist -> "Download ${phase.preview.importable} songs"
-                is AddSongPhase.Downloading -> "Downloading…"
-                is AddSongPhase.Success -> "Downloaded"
-                is AddSongPhase.PlaylistSuccess -> "Imported"
+                is AddSongPhase.Resolving -> if (state.isPlaylistUrl) "Fetch" else "Fetch"
+                is AddSongPhase.Preview -> "Download"
+                is AddSongPhase.PreviewPlaylist -> "Download ${phase.preview.importable}"
+                is AddSongPhase.Downloading -> "Working…"
+                is AddSongPhase.Success -> "Done"
+                is AddSongPhase.PlaylistSuccess -> "Done"
             }
             Button(
                 onClick = viewModel::submit,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .height(50.dp),
+                    .padding(horizontal = AuraSpacing.Md)
+                    .height(52.dp),
                 enabled = state.url.isNotBlank() &&
                     state.phase !is AddSongPhase.Resolving &&
                     state.phase !is AddSongPhase.Downloading &&
@@ -151,40 +106,73 @@ fun AddSongScreen(
                     state.phase !is AddSongPhase.PlaylistSuccess &&
                     (state.phase !is AddSongPhase.PreviewPlaylist ||
                         (state.phase as AddSongPhase.PreviewPlaylist).preview.importable > 0),
-                shape = RoundedCornerShape(14.dp)
+                shape = RoundedCornerShape(AuraRadius.Md)
             ) {
                 Icon(
                     imageVector = Icons.Default.CloudDownload,
                     contentDescription = null
                 )
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(AuraSpacing.Xs))
                 Text(ctaLabel)
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            // Pinned below the main CTA (never inside the scrolling preview):
+            // a video shared from inside a playlist can be upgraded to the
+            // whole-list import with one tap. It must not live under the
+            // preview card where short screens would cut it off.
+            val playlistOptionUrl = (state.phase as? AddSongPhase.Preview)?.playlistOptionUrl
+            if (playlistOptionUrl != null) {
+                Spacer(modifier = Modifier.height(AuraSpacing.Xs))
+                OutlinedButton(
+                    onClick = viewModel::usePlaylistInstead,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = AuraSpacing.Md)
+                        .height(48.dp),
+                    shape = RoundedCornerShape(AuraRadius.Md)
+                ) {
+                    Text("Get full playlist")
+                }
+            }
 
+            Spacer(modifier = Modifier.height(AuraSpacing.Md))
+
+            // Scrollable phase area: on short screens (or with the keyboard
+            // open) tall previews must not push buttons like "Get full
+            // playlist" off-screen with no way to reach them.
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
+                    .padding(bottom = AuraSpacing.Md)
+            ) {
+            AnimatedContent(
+                targetState = phaseKey(state.phase),
+                label = "downloadPhase"
+            ) { _ ->
             when (val phase = state.phase) {
                 is AddSongPhase.Idle -> {
                     GlassCard(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                        cornerRadius = 16.dp
+                            .padding(horizontal = AuraSpacing.Md)
+                            .animateContentSize()
                     ) {
                         Row(
-                            modifier = Modifier.padding(16.dp),
+                            modifier = Modifier.padding(AuraSpacing.Md),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
                                 imageVector = Icons.Default.MusicNote,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(32.dp)
+                                modifier = Modifier.size(28.dp)
                             )
-                            Spacer(modifier = Modifier.width(12.dp))
+                            Spacer(modifier = Modifier.width(AuraSpacing.Sm))
                             Text(
-                                text = "Paste any YouTube link — a video, Short, or playlist. Links shared from inside a playlist offer the whole list too. Channels and other sites aren't supported.",
-                                style = MaterialTheme.typography.bodySmall,
+                                text = "Video, Short or playlist — up to 50 tracks.",
+                                style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -195,19 +183,19 @@ fun AddSongScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(32.dp),
+                            .padding(AuraSpacing.Xxl),
                         contentAlignment = Alignment.Center
                     ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                            verticalArrangement = Arrangement.spacedBy(AuraSpacing.Sm)
                         ) {
                             CircularProgressIndicator(
-                                modifier = Modifier.size(48.dp),
+                                modifier = Modifier.size(40.dp),
                                 color = MaterialTheme.colorScheme.primary
                             )
                             Text(
-                                text = "Reading title, quality and artwork…",
+                                text = "Reading link…",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -220,11 +208,11 @@ fun AddSongScreen(
                     GlassCard(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                        cornerRadius = 16.dp
+                            .padding(horizontal = AuraSpacing.Md)
+                            .animateContentSize()
                     ) {
                         Row(
-                            modifier = Modifier.padding(14.dp),
+                            modifier = Modifier.padding(AuraSpacing.Md),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             if (info.thumbnailUrl != null) {
@@ -232,18 +220,18 @@ fun AddSongScreen(
                                     model = info.thumbnailUrl,
                                     contentDescription = info.title,
                                     modifier = Modifier
-                                        .size(72.dp)
-                                        .clip(RoundedCornerShape(12.dp))
+                                        .size(64.dp)
+                                        .clip(RoundedCornerShape(AuraRadius.Md))
                                 )
                             } else {
-                                Icon(
-                                    imageVector = Icons.Default.MusicNote,
+                                AlbumArt(
+                                    thumbnailPath = null,
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(48.dp)
+                                    size = 64.dp,
+                                    cornerRadius = AuraRadius.Md
                                 )
                             }
-                            Spacer(modifier = Modifier.width(12.dp))
+                            Spacer(modifier = Modifier.width(AuraSpacing.Sm))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = info.title,
@@ -262,8 +250,8 @@ fun AddSongScreen(
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Spacer(modifier = Modifier.height(AuraSpacing.Xxs))
+                                Row(horizontalArrangement = Arrangement.spacedBy(AuraSpacing.Xs)) {
                                     QualityBadge(
                                         codec = info.codec,
                                         bitrateKbps = info.bitrateKbps
@@ -277,26 +265,6 @@ fun AddSongScreen(
                             }
                         }
                     }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Tap “Download best quality” to save ${info.qualityLabel} without re-encoding.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 20.dp)
-                    )
-                    if (phase.playlistOptionUrl != null) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        OutlinedButton(
-                            onClick = viewModel::usePlaylistInstead,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp)
-                                .height(48.dp),
-                            shape = RoundedCornerShape(14.dp)
-                        ) {
-                            Text("Download whole playlist instead")
-                        }
-                    }
                 }
 
                 is AddSongPhase.PreviewPlaylist -> {
@@ -304,28 +272,28 @@ fun AddSongScreen(
                     GlassCard(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                        cornerRadius = 16.dp
+                            .padding(horizontal = AuraSpacing.Md)
+                            .animateContentSize()
                     ) {
-                        Column(modifier = Modifier.padding(14.dp)) {
+                        Column(modifier = Modifier.padding(AuraSpacing.Md)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 if (preview.thumbnailUrl != null) {
                                     AsyncImage(
                                         model = preview.thumbnailUrl,
                                         contentDescription = preview.title,
                                         modifier = Modifier
-                                            .size(72.dp)
-                                            .clip(RoundedCornerShape(12.dp))
+                                            .size(64.dp)
+                                            .clip(RoundedCornerShape(AuraRadius.Md))
                                     )
                                 } else {
-                                    Icon(
-                                        imageVector = Icons.Default.MusicNote,
+                                    AlbumArt(
+                                        thumbnailPath = null,
                                         contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(48.dp)
+                                        size = 64.dp,
+                                        cornerRadius = AuraRadius.Md
                                     )
                                 }
-                                Spacer(modifier = Modifier.width(12.dp))
+                                Spacer(modifier = Modifier.width(AuraSpacing.Sm))
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         text = preview.title,
@@ -337,7 +305,7 @@ fun AddSongScreen(
                                     Text(
                                         text = listOfNotNull(
                                             preview.author,
-                                            "${preview.videoUrls.size} songs" +
+                                            "${preview.videoUrls.size} tracks" +
                                                 if (preview.isCapped) {
                                                     " (first ${preview.videoUrls.size} of ${preview.totalCount})"
                                                 } else ""
@@ -349,7 +317,7 @@ fun AddSongScreen(
                                     )
                                     if (preview.duplicates > 0) {
                                         Text(
-                                            text = "${preview.duplicates} already in library — skipped",
+                                            text = "${preview.duplicates} dupes skipped",
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.primary
                                         )
@@ -358,14 +326,14 @@ fun AddSongScreen(
                             }
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(top = 4.dp)
+                                modifier = Modifier.padding(top = AuraSpacing.Xxs)
                             ) {
                                 Checkbox(
                                     checked = phase.tagWithPlaylist,
                                     onCheckedChange = { viewModel.togglePlaylistTag() }
                                 )
                                 Text(
-                                    text = "Tag all as \"${preview.title}\"",
+                                    text = "Tag as “${preview.title}”",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 1,
@@ -374,12 +342,12 @@ fun AddSongScreen(
                             }
                         }
                     }
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(AuraSpacing.Xs))
                     Text(
-                        text = "Each song downloads in best quality. Private or deleted videos are skipped.",
+                        text = "Skips private or deleted videos.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 20.dp)
+                        modifier = Modifier.padding(horizontal = AuraSpacing.Lg)
                     )
                 }
 
@@ -387,16 +355,15 @@ fun AddSongScreen(
                     GlassCard(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                        cornerRadius = 16.dp
+                            .padding(horizontal = AuraSpacing.Md)
                     ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
+                        Column(modifier = Modifier.padding(AuraSpacing.Md)) {
                             Text(
                                 text = stageLabel(phase.stage),
                                 style = MaterialTheme.typography.titleSmall,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(AuraSpacing.Xs))
                             LinearProgressIndicator(
                                 progress = { (phase.percent / 100f).coerceIn(0f, 1f) },
                                 modifier = Modifier
@@ -406,14 +373,14 @@ fun AddSongScreen(
                                 color = MaterialTheme.colorScheme.primary,
                                 trackColor = MaterialTheme.colorScheme.surfaceVariant
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(AuraSpacing.Xs))
                             Text(
                                 text = progressDetail(phase),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             if (phase.subtitle != null) {
-                                Spacer(modifier = Modifier.height(4.dp))
+                                Spacer(modifier = Modifier.height(AuraSpacing.Xxs))
                                 Text(
                                     text = phase.subtitle!!,
                                     style = MaterialTheme.typography.bodySmall,
@@ -430,32 +397,32 @@ fun AddSongScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(32.dp),
+                            .padding(AuraSpacing.Xxl),
                         contentAlignment = Alignment.Center
                     ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                            verticalArrangement = Arrangement.spacedBy(AuraSpacing.Sm)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.CheckCircle,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(48.dp)
+                                modifier = Modifier.size(44.dp)
                             )
                             Text(
-                                text = "Saved in best quality!",
+                                text = "Saved",
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Row(
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                horizontalArrangement = Arrangement.spacedBy(AuraSpacing.Sm)
                             ) {
                                 TextButton(onClick = { viewModel.reset() }) {
-                                    Text("Add another")
+                                    Text("Add more")
                                 }
                                 Button(onClick = { onSongAdded(phase.songId) }) {
-                                    Text("View in library")
+                                    Text("View")
                                 }
                             }
                         }
@@ -466,32 +433,32 @@ fun AddSongScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(32.dp),
+                            .padding(AuraSpacing.Xxl),
                         contentAlignment = Alignment.Center
                     ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                            verticalArrangement = Arrangement.spacedBy(AuraSpacing.Sm)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.CheckCircle,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(48.dp)
+                                modifier = Modifier.size(44.dp)
                             )
                             Text(
-                                text = "\"${phase.playlistTitle}\" imported",
+                                text = "“${phase.playlistTitle}” saved",
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "${phase.imported} downloaded • " +
-                                    "${phase.skipped} already here • " +
+                                text = "${phase.imported} saved • " +
+                                    "${phase.skipped} dupes • " +
                                     "${phase.failed} failed",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            phase.errors.take(4).forEach { err ->
+                            phase.errors.take(3).forEach { err ->
                                 Text(
                                     text = err,
                                     style = MaterialTheme.typography.bodySmall,
@@ -499,13 +466,13 @@ fun AddSongScreen(
                                 )
                             }
                             Row(
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                horizontalArrangement = Arrangement.spacedBy(AuraSpacing.Sm)
                             ) {
                                 TextButton(onClick = { viewModel.reset() }) {
-                                    Text("Import another")
+                                    Text("More")
                                 }
                                 Button(onClick = onPlaylistDone) {
-                                    Text("Open library")
+                                    Text("Library")
                                 }
                             }
                         }
@@ -516,18 +483,18 @@ fun AddSongScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(32.dp),
+                            .padding(AuraSpacing.Xxl),
                         contentAlignment = Alignment.Center
                     ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                            verticalArrangement = Arrangement.spacedBy(AuraSpacing.Sm)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Error,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.size(48.dp)
+                                modifier = Modifier.size(44.dp)
                             )
                             Text(
                                 text = phase.message,
@@ -535,20 +502,32 @@ fun AddSongScreen(
                                 color = MaterialTheme.colorScheme.error
                             )
                             TextButton(onClick = { viewModel.reset() }) {
-                                Text("Try again")
+                                Text("Retry")
                             }
                         }
                     }
                 }
             }
+            }
         }
     }
 }
 
+private fun phaseKey(phase: AddSongPhase): String = when (phase) {
+    is AddSongPhase.Idle -> "idle"
+    is AddSongPhase.Resolving -> "loading"
+    is AddSongPhase.Preview -> "preview"
+    is AddSongPhase.PreviewPlaylist -> "playlist"
+    is AddSongPhase.Downloading -> "downloading"
+    is AddSongPhase.Success -> "done"
+    is AddSongPhase.PlaylistSuccess -> "doneList"
+    is AddSongPhase.Error -> "error"
+}
+
 private fun stageLabel(stage: String): String = when (stage) {
-    "resolving" -> "Resolving stream…"
-    "downloading" -> "Downloading best-quality audio…"
-    "saving" -> "Saving to library…"
+    "resolving" -> "Reading…"
+    "downloading" -> "Downloading…"
+    "saving" -> "Saving…"
     "done" -> "Done"
     else -> "Working…"
 }

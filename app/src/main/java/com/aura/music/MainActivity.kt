@@ -8,13 +8,21 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.aura.music.data.DefaultTagSeeder
+import com.aura.music.ui.components.AuraSplash
 import com.aura.music.ui.navigation.AuraNavHost
 import com.aura.music.ui.theme.AuraTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -50,7 +58,18 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    AuraNavHost()
+                    var showSplash by rememberSaveable { mutableStateOf(true) }
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        AuraNavHost()
+                        // All motion lives inside AuraSplash (appear → hold → expand);
+                        // the shell just drops the already-invisible layer.
+                        AnimatedVisibility(
+                            visible = showSplash,
+                            exit = fadeOut(animationSpec = androidx.compose.animation.core.tween(150))
+                        ) {
+                            AuraSplash(onDone = { showSplash = false })
+                        }
+                    }
                 }
             }
         }

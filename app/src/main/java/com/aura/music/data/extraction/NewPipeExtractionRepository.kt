@@ -5,9 +5,9 @@ import com.aura.music.domain.repository.DownloadResult
 import com.aura.music.domain.repository.ExtractedPlaylist
 import com.aura.music.domain.repository.ExtractedStreamInfo
 import com.aura.music.domain.repository.ExtractionRepository
+import com.aura.music.domain.repository.YouTubeTrack
 import com.aura.music.util.YoutubeUrls
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -22,7 +22,8 @@ import javax.inject.Singleton
 
 @Singleton
 class NewPipeExtractionRepository @Inject constructor(
-    private val okHttpClient: OkHttpClient
+    private val okHttpClient: OkHttpClient,
+    private val ytGate: YtGate
 ) : ExtractionRepository {
 
     init {
@@ -40,31 +41,27 @@ class NewPipeExtractionRepository @Inject constructor(
             require(YoutubeUrls.isYouTubeUrl(canonical)) {
                 YoutubeUrls.rejectionReason(url)
             }
-            // Stream URLs issued by YouTube expire / get throttled; retry the
-            // player-response fetch a few times before surfacing an error.
-            var lastError: Exception? = null
-            repeat(3) { attempt ->
-                try {
-                    return@withContext resolveOnce(canonical)
-                } catch (e: Exception) {
-                    lastError = e
-                    Log.w("NewPipeRepo", "resolve attempt ${attempt + 1} failed: ${e.message}")
-                    if (attempt < 2) delay(1_000L * (attempt + 1))
+            // Gated + polite backoff: never burst the player API, never spin
+            // on validation errors.
+            try {
+                ytGate.withPermit {
+                    ytRetry { resolveOnce(canonical) }
                 }
+            } catch (e: Exception) {
+                Log.e("NewPipeRepo", "Stream info extraction failed", e)
+                // Surface the root cause (truncated) so failures are diagnosable
+                // from the phone screen instead of a generic message.
+                var root: Throwable? = e
+                while (root?.cause != null && root.cause !== root) root = root.cause
+                val detail = root?.message?.takeIf { it.isNotBlank() }?.take(140)
+                throw RuntimeException(
+                    buildString {
+                        append("Couldn't read that video (it may be private, age-restricted or region-locked)")
+                        if (detail != null) append(": $detail")
+                    },
+                    e
+                )
             }
-            Log.e("NewPipeRepo", "Stream info extraction failed", lastError)
-            // Surface the root cause (truncated) so failures are diagnosable
-            // from the phone screen instead of a generic message.
-            var root: Throwable? = lastError
-            while (root?.cause != null && root.cause !== root) root = root.cause
-            val detail = root?.message?.takeIf { it.isNotBlank() }?.take(140)
-            throw RuntimeException(
-                buildString {
-                    append("Couldn't read that video (it may be private, age-restricted or region-locked)")
-                    if (detail != null) append(": $detail")
-                },
-                lastError
-            )
         }
 
     override suspend fun resolvePlaylist(url: String): ExtractedPlaylist =
@@ -75,14 +72,12 @@ class NewPipeExtractionRepository @Inject constructor(
             }
 
             var lastError: Exception? = null
-            repeat(3) { attempt ->
-                try {
-                    return@withContext resolvePlaylistOnce(canonical)
-                } catch (e: Exception) {
-                    lastError = e
-                    Log.w("NewPipeRepo", "playlist attempt ${attempt + 1} failed: ${e.message}")
-                    if (attempt < 2) delay(1_000L * (attempt + 1))
+            try {
+                return@withContext ytGate.withPermit {
+                    ytRetry { resolvePlaylistOnce(canonical) }
                 }
+            } catch (e: Exception) {
+                lastError = e
             }
             var root: Throwable? = lastError
             while (root?.cause != null && root.cause !== root) root = root.cause
@@ -94,6 +89,75 @@ class NewPipeExtractionRepository @Inject constructor(
                 },
                 lastError
             )
+        }
+
+    override suspend fun searchMusic(query: String, maxResults: Int): List<YouTubeTrack> =
+        withContext(Dispatchers.IO) {
+            val trimmed = query.trim()
+            require(trimmed.isNotEmpty()) { "Type a song or artist to search." }
+            try {
+                ytGate.withPermit {
+                    // "Nothing found" is a final answer, not a transient error.
+                    ytRetry(
+                        retryIf = { e ->
+                            e !is org.schabi.newpipe.extractor.search.SearchExtractor.NothingFoundException &&
+                                isTransientYtError(e)
+                        }
+                    ) { searchOnce(trimmed, maxResults) }
+                }
+            } catch (e: org.schabi.newpipe.extractor.search.SearchExtractor.NothingFoundException) {
+                emptyList()
+            } catch (e: Exception) {
+                Log.w("NewPipeRepo", "music search failed: ${e.message}")
+                var root: Throwable? = e
+                while (root?.cause != null && root.cause !== root) root = root.cause
+                val detail = root?.message?.takeIf { it.isNotBlank() }?.take(140)
+                throw RuntimeException(
+                    buildString {
+                        append("YouTube search failed (check connection and retry)")
+                        if (detail != null) append(": $detail")
+                    },
+                    e
+                )
+            }
+        }
+
+    private fun searchOnce(query: String, maxResults: Int): List<YouTubeTrack> {
+            val service = ServiceList.YouTube
+            val handler = service.searchQHFactory.fromQuery(
+                query,
+                listOf(
+                    org.schabi.newpipe.extractor.services.youtube.linkHandler
+                        .YoutubeSearchQueryHandlerFactory.MUSIC_SONGS
+                ),
+                ""
+            )
+            val info = org.schabi.newpipe.extractor.search.SearchInfo
+                .getInfo(service, handler)
+            return info.relatedItems
+                ?.asSequence()
+                ?.filterIsInstance<org.schabi.newpipe.extractor.stream.StreamInfoItem>()
+                ?.filter { !it.url.isNullOrBlank() && !it.name.isNullOrBlank() }
+                ?.take(maxResults.coerceIn(1, 50))
+                ?.map { item ->
+                    val durationSec = try { item.duration } catch (_: Exception) { -1L }
+                    val thumb = try {
+                        item.thumbnails?.maxByOrNull { t -> t.height * t.width }?.url
+                            ?: item.thumbnails?.lastOrNull()?.url
+                    } catch (_: Exception) {
+                        null
+                    }
+                    val rawUrl = item.url!!
+                    YouTubeTrack(
+                        url = try { YoutubeUrls.canonicalUrl(rawUrl) } catch (_: Exception) { rawUrl },
+                        title = item.name!!,
+                        artist = try { item.uploaderName?.takeIf { it.isNotBlank() } } catch (_: Exception) { null },
+                        durationMs = if (durationSec > 0) durationSec * 1000 else 0L,
+                        thumbnailUrl = thumb
+                    )
+                }
+                ?.toList()
+                .orEmpty()
         }
 
     private fun resolvePlaylistOnce(canonicalUrl: String): ExtractedPlaylist {

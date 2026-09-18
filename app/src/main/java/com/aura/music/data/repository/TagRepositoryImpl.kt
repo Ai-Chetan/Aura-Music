@@ -4,6 +4,7 @@ import com.aura.music.data.db.SongTagCrossRef
 import com.aura.music.data.db.TagDao
 import com.aura.music.data.db.TagEntity
 import com.aura.music.domain.repository.TagRepository
+import com.aura.music.ui.theme.TagColors
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -29,7 +30,7 @@ class TagRepositoryImpl @Inject constructor(
         return tagDao.insertTag(
             TagEntity(
                 name = normalizedName,
-                colorHex = colorHex
+                colorHex = resolveColor(normalizedName, colorHex)
             )
         )
     }
@@ -42,7 +43,7 @@ class TagRepositoryImpl @Inject constructor(
         val insertedId = tagDao.insertTag(
             TagEntity(
                 name = normalizedName,
-                colorHex = colorHex
+                colorHex = resolveColor(normalizedName, colorHex)
             )
         )
 
@@ -69,4 +70,20 @@ class TagRepositoryImpl @Inject constructor(
 
     private fun normalizeTagName(name: String): String =
         name.trim().lowercase()
+
+    /**
+     * Keep explicit colors (seeds, backups). New tags cycle the
+     * controlled palette one-by-one: semantic match first,
+     * otherwise Palette[count % size].
+     */
+    private suspend fun resolveColor(name: String, requested: String?): String {
+        if (!requested.isNullOrBlank()) return requested
+        TagColors.semanticFor(name)?.let { return it }
+        val count = try {
+            tagDao.getTagCount()
+        } catch (_: Exception) {
+            0
+        }
+        return TagColors.nextFor(name, count)
+    }
 }

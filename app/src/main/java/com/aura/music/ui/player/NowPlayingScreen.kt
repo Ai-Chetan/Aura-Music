@@ -3,12 +3,14 @@ package com.aura.music.ui.player
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -43,6 +45,7 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -54,19 +57,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import com.aura.music.playback.RepeatMode
 import com.aura.music.ui.components.AlbumArt
 import com.aura.music.ui.components.AmbientBackground
 import com.aura.music.ui.components.AudioReactiveWaveform
 import com.aura.music.ui.components.QualityBadge
+import com.aura.music.ui.theme.AuraRadius
+import com.aura.music.ui.theme.AuraSpacing
 import com.aura.music.util.formatDuration
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -77,18 +85,23 @@ fun NowPlayingScreen(
 ) {
     val state by viewModel.playbackState.collectAsStateWithLifecycle()
     val song = state.currentSong
-    val waveform by viewModel.waveform.collectAsStateWithLifecycle()
     var showQueue by remember { mutableStateOf(false) }
 
+    // Horizontal swipe on the artwork block changes the track: the art
+    // follows the finger, and releasing past the threshold skips.
+    // Swipe left → previous, swipe right → next.
+    var trackDragX by remember { mutableFloatStateOf(0f) }
+    val swipeThresholdPx = with(LocalDensity.current) { 72.dp.toPx() }
+    LaunchedEffect(song?.id) { trackDragX = 0f }
+
     Box(modifier = Modifier.fillMaxSize()) {
-        AmbientBackground()
+        AmbientBackground(animate = true)
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .windowInsetsPadding(WindowInsets.statusBars)
-                .padding(top = 0.dp)
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = AuraSpacing.Xl),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
         Row(
@@ -117,56 +130,83 @@ fun NowPlayingScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(AuraSpacing.Lg))
 
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .graphicsLayer { translationX = trackDragX }
+                .pointerInput(swipeThresholdPx) {
+                    detectHorizontalDragGestures(
+                        onDragCancel = { trackDragX = 0f },
+                        onDragEnd = {
+                            when {
+                                trackDragX <= -swipeThresholdPx -> viewModel.skipToPrevious()
+                                trackDragX >= swipeThresholdPx -> viewModel.skipToNext()
+                            }
+                            trackDragX = 0f
+                        },
+                        onHorizontalDrag = { change, dragAmount ->
+                            change.consume()
+                            if (song != null) trackDragX += dragAmount
+                        }
+                    )
+                },
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
         AlbumArt(
             thumbnailPath = song?.thumbnailPath,
             contentDescription = song?.title,
-            size = 280.dp,
-            cornerRadius = 24.dp
+            size = 264.dp,
+            cornerRadius = AuraRadius.Xl
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(AuraSpacing.Md))
 
         if (song != null) {
             QualityBadge(codec = song.audioFormat, bitrateKbps = song.bitrateKbps)
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(AuraSpacing.Xs))
         }
 
-        Text(
-            text = song?.title ?: "No song playing",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.Center
-        )
-
-        if (!song?.artist.isNullOrBlank()) {
-            Spacer(modifier = Modifier.height(4.dp))
+        AnimatedContent(
+            targetState = song?.title ?: "Nothing playing",
+            label = "trackTitle"
+        ) { title ->
             Text(
-                text = song?.artist ?: "",
-                fontSize = 16.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = title,
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center
             )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        if (!song?.artist.isNullOrBlank()) {
+            Spacer(modifier = Modifier.height(AuraSpacing.Xxs))
+            Text(
+                text = song?.artist ?: "",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center
+            )
+        }
+        }
+
+        Spacer(modifier = Modifier.height(AuraSpacing.Md))
 
         AudioReactiveWaveform(
-            magnitudes = waveform,
+            flow = viewModel.waveform,
             isPlaying = state.isPlaying,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(96.dp)
-                .padding(horizontal = 8.dp)
+                .height(84.dp)
+                .padding(horizontal = AuraSpacing.Xs)
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(AuraSpacing.Sm))
 
         Slider(
             value = if (state.durationMs > 0) {
@@ -200,9 +240,9 @@ fun NowPlayingScreen(
         }
 
         if (state.errorMessage != null) {
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(AuraSpacing.Xs))
             Text(
-                text = "Playback error: ${state.errorMessage}",
+                text = "Couldn't play: ${state.errorMessage}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
                 textAlign = TextAlign.Center,
@@ -210,7 +250,7 @@ fun NowPlayingScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(AuraSpacing.Md))
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -243,21 +283,27 @@ fun NowPlayingScreen(
             IconButton(
                 onClick = { viewModel.togglePlayPause() },
                 modifier = Modifier
-                    .size(72.dp)
+                    .size(68.dp)
                     .clip(RoundedCornerShape(percent = 50))
                     .background(MaterialTheme.colorScheme.primary),
                 enabled = song != null
             ) {
-                Icon(
-                    imageVector = if (state.isPlaying) {
-                        Icons.Default.Pause
-                    } else {
-                        Icons.Default.PlayArrow
-                    },
-                    contentDescription = if (state.isPlaying) "Pause" else "Play",
-                    modifier = Modifier.size(40.dp),
-                    tint = MaterialTheme.colorScheme.onPrimary
-                )
+                AnimatedContent(
+                    targetState = state.isPlaying,
+                    transitionSpec = { fadeIn() togetherWith fadeOut() },
+                    label = "playPause"
+                ) { playing ->
+                    Icon(
+                        imageVector = if (playing) {
+                            Icons.Default.Pause
+                        } else {
+                            Icons.Default.PlayArrow
+                        },
+                        contentDescription = if (playing) "Pause" else "Play",
+                        modifier = Modifier.size(36.dp),
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
             }
 
             IconButton(onClick = { viewModel.skipToNext() }) {
@@ -286,7 +332,7 @@ fun NowPlayingScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(AuraSpacing.Xl))
         }
     }
 
@@ -296,34 +342,50 @@ fun NowPlayingScreen(
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
             containerColor = MaterialTheme.colorScheme.surface
         ) {
+            // Fixed-height sheet: removing songs must not shrink it.
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.75f)
+            ) {
             Text(
-                text = "Queue (${state.queue.size}) — plays top to bottom",
+                text = "Queue • ${state.queue.size}",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
+                modifier = Modifier.padding(horizontal = AuraSpacing.Lg, vertical = AuraSpacing.Xxs)
             )
             Text(
-                text = "Tap to play • long-press and drag to reorder",
+                text = "Tap to play, drag to reorder",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 20.dp)
+                modifier = Modifier.padding(horizontal = AuraSpacing.Lg)
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(AuraSpacing.Xxs))
             if (state.queue.isEmpty()) {
-                Text(
-                    text = "Queue is empty. Swipe a song right or use ⋮ → Add to queue from your library.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 24.dp)
-                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Queue empty — add songs from Library.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = AuraSpacing.Lg)
+                    )
+                }
             } else {
-                QueueSheetList(
-                    queue = state.queue,
-                    currentIndex = state.currentIndexInQueue,
-                    onPlayAt = viewModel::playAtIndex,
-                    onRemove = viewModel::removeFromQueue,
-                    onMove = viewModel::moveQueue
-                )
+                Box(modifier = Modifier.weight(1f)) {
+                    QueueSheetList(
+                        queue = state.queue,
+                        currentIndex = state.currentIndexInQueue,
+                        onPlayAt = viewModel::playAtIndex,
+                        onRemove = viewModel::removeFromQueue,
+                        onMove = viewModel::moveQueue
+                    )
+                }
+            }
             }
         }
     }
@@ -359,7 +421,7 @@ private fun QueueSheetList(
 
     LazyColumn(
         state = listState,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxSize(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 48.dp)
     ) {
         itemsIndexed(
@@ -422,7 +484,7 @@ private fun QueueSheetList(
                             else -> androidx.compose.ui.graphics.Color.Transparent
                         }
                     )
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                    .padding(horizontal = AuraSpacing.Sm, vertical = AuraSpacing.Xs),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(

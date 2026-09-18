@@ -5,12 +5,15 @@
 ### Song
 
 ```kotlin
-@Entity(tableName = "songs")
+@Entity(
+    tableName = "songs",
+    indices = [Index(value = ["sourceUrl"], unique = true)]
+)
 data class SongEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val title: String,
     val artist: String?,
-    val sourceUrl: String,            // canonical YouTube watch URL
+    val sourceUrl: String,            // canonical YouTube watch URL (unique)
     val sourcePlatform: String,       // "youtube"
     val localFilePath: String,        // absolute path in app-specific storage
     val thumbnailPath: String?,       // cached local thumbnail path
@@ -23,6 +26,8 @@ data class SongEntity(
     val lastPlayedAt: Long? = null
 )
 ```
+
+> DB is at version 2. Migration 1→2 dedupes pre-existing duplicate `sourceUrl` rows (keeps oldest) and creates the unique index — upgrades preserve user vaults, no destructive fallback in this path.
 
 ### Tag
 
@@ -135,7 +140,7 @@ interface SongDao {
     @Query("SELECT * FROM songs WHERE title LIKE '%' || :query || '%' OR artist LIKE '%' || :query || '%'")
     fun searchSongs(query: String): Flow<List<SongEntity>>
 
-    @Insert
+    @Insert(onConflict = OnConflictStrategy.IGNORE)  // -1 on duplicate URL; callers resolve the existing id
     suspend fun insertSong(song: SongEntity): Long
 
     @Query("UPDATE songs SET playCount = playCount + 1, lastPlayedAt = :now WHERE id = :songId")
@@ -154,8 +159,15 @@ interface SongRepository {
     fun observeSongsByTags(tagNames: List<String>, matchAll: Boolean): Flow<List<SongEntity>>
     fun searchSongs(query: String): Flow<List<SongEntity>>
     suspend fun addSongFromUrl(url: String): Result<Long>       // blocking enqueue + await
-    suspend fun enqueueDownload(url: String): UUID              // non-blocking, observed via WorkInfo
+    suspend fun enqueueDownload(url: String, initialDelaySeconds: Long = 0): UUID
     fun observeDownloadWork(workId: UUID): Flow<WorkInfo?>
+    fun observeActiveDownloads(): Flow<List<ActiveDownload>>    // live singles queue
+    suspend fun cancelDownload(workId: UUID)
+    // Starter-batch tracking (Getting Started selections):
+    fun trackStarterBatch(items: List<BatchItem>)
+    fun observeStarterBatch(): Flow<StarterBatchStatus?>
+    suspend fun retryStarterBatch()
+    fun clearStarterBatch()
     suspend fun previewFromUrl(url: String): Result<ExtractedStreamInfo>
     suspend fun deleteSong(songId: Long)                        // also removes audio + artwork files
     suspend fun recordPlay(songId: Long)
@@ -163,7 +175,8 @@ interface SongRepository {
     suspend fun describeImport(json: String): Result<ImportPreview>
     suspend fun importLibraryJson(json: String, onProgress: ...): Result<ImportSummary>
     suspend fun describePlaylist(url: String): Result<PlaylistPreview>
-    suspend fun importPlaylist(url: String, playlistTag: String?, onProgress: ...): Result<PlaylistImportSummary>
+    suspend fun enqueuePlaylistImport(url: String, playlistTag: String?): UUID   // background worker
+    fun observePlaylistImports(): Flow<List<PlaylistImportState>>                // live playlist progress
 }
 
 interface TagRepository {
@@ -174,10 +187,20 @@ interface TagRepository {
 }
 
 interface ExtractionRepository {
-    suspend fun resolveStreamInfo(url: String): ExtractedStreamInfo
-    suspend fun resolvePlaylist(url: String): ExtractedPlaylist
+    suspend fun resolveStreamInfo(url: String): ExtractedStreamInfo   // gated + retried (YtGate/ytRetry)
+    suspend fun resolvePlaylist(url: String): ExtractedPlaylist       // gated + retried
+    suspend fun searchMusic(query: String, maxResults: Int = 25): List<YouTubeTrack>  // YT Music song filter
     suspend fun downloadAudio(streamInfo: ExtractedStreamInfo, destination: File): DownloadResult
 }
+
+/** One YouTube Music search hit — streamable, downloadable, not yet saved. */
+data class YouTubeTrack(
+    val url: String,          // canonical watch URL
+    val title: String,
+    val artist: String?,
+    val durationMs: Long,     // 0 when unknown (e.g. live)
+    val thumbnailUrl: String?
+)
 
 data class ExtractedStreamInfo(
     val title: String,

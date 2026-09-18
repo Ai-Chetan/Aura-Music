@@ -11,6 +11,7 @@ import com.aura.music.domain.repository.SongRepository
 import com.aura.music.domain.repository.TagRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -18,6 +19,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.time.LocalDate
 import javax.inject.Inject
@@ -105,7 +107,11 @@ class BackupViewModel @Inject constructor(
     fun startExport() {
         viewModelScope.launch {
             val (excluded, onlyIds) = exportScope()
-            songRepository.exportLibraryJson(excluded, onlyIds)
+            // JSON serialization of a big vault must not run on Main.
+            val result = withContext(Dispatchers.IO) {
+                songRepository.exportLibraryJson(excluded, onlyIds)
+            }
+            result
                 .onSuccess { json ->
                     val name = "aura-library-${LocalDate.now()}.json"
                     _uiState.update {
@@ -127,27 +133,34 @@ class BackupViewModel @Inject constructor(
     fun writeExport(uri: Uri) {
         val json = _uiState.value.pendingExportJson ?: return
         viewModelScope.launch {
-            try {
-                appContext.contentResolver.openOutputStream(uri)?.use { out ->
-                    out.write(json.toByteArray(Charsets.UTF_8))
-                    out.flush()
-                } ?: throw IllegalStateException("Couldn't open that location for writing.")
-                _uiState.update {
-                    it.copy(
-                        pendingExportJson = null,
-                        pendingExportName = null,
-                        exportMessage = "Library exported."
-                    )
-                }
-            } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        pendingExportJson = null,
-                        pendingExportName = null,
-                        exportMessage = "Export failed: ${e.message}"
-                    )
+            // File I/O off Main; state updates are thread-safe.
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    appContext.contentResolver.openOutputStream(uri)?.use { out ->
+                        out.write(json.toByteArray(Charsets.UTF_8))
+                        out.flush()
+                    } ?: throw IllegalStateException("Couldn't open that location for writing.")
                 }
             }
+            result
+                .onSuccess {
+                    _uiState.update {
+                        it.copy(
+                            pendingExportJson = null,
+                            pendingExportName = null,
+                            exportMessage = "Library exported."
+                        )
+                    }
+                }
+                .onFailure { e ->
+                    _uiState.update {
+                        it.copy(
+                            pendingExportJson = null,
+                            pendingExportName = null,
+                            exportMessage = "Export failed: ${e.message}"
+                        )
+                    }
+                }
         }
     }
 
@@ -159,23 +172,32 @@ class BackupViewModel @Inject constructor(
     fun shareExport() {
         viewModelScope.launch {
             val (excluded, onlyIds) = exportScope()
-            songRepository.exportLibraryJson(excluded, onlyIds)
+            val result = withContext(Dispatchers.IO) {
+                songRepository.exportLibraryJson(excluded, onlyIds)
+            }
+            result
                 .onSuccess { json ->
-                    try {
-                        val dir = File(appContext.cacheDir, "backup").apply { mkdirs() }
-                        val file = File(dir, "aura-library-${LocalDate.now()}.json")
-                        file.writeText(json, Charsets.UTF_8)
-                        val uri = FileProvider.getUriForFile(
-                            appContext,
-                            "${appContext.packageName}.fileprovider",
-                            file
-                        )
-                        _uiState.update { it.copy(pendingShareUri = uri, exportMessage = null) }
-                    } catch (e: Exception) {
-                        _uiState.update {
-                            it.copy(exportMessage = "Share failed: ${e.message}")
+                    val staged = withContext(Dispatchers.IO) {
+                        runCatching {
+                            val dir = File(appContext.cacheDir, "backup").apply { mkdirs() }
+                            val file = File(dir, "aura-library-${LocalDate.now()}.json")
+                            file.writeText(json, Charsets.UTF_8)
+                            FileProvider.getUriForFile(
+                                appContext,
+                                "${appContext.packageName}.fileprovider",
+                                file
+                            )
                         }
                     }
+                    staged
+                        .onSuccess { uri ->
+                            _uiState.update { it.copy(pendingShareUri = uri, exportMessage = null) }
+                        }
+                        .onFailure { e ->
+                            _uiState.update {
+                                it.copy(exportMessage = "Share failed: ${e.message}")
+                            }
+                        }
                 }
                 .onFailure { e ->
                     _uiState.update {
@@ -199,27 +221,36 @@ class BackupViewModel @Inject constructor(
                     importSummary = null, importError = null
                 )
             }
-            try {
-                val text = appContext.contentResolver.openInputStream(uri)?.use { input ->
-                    input.readBytes().toString(Charsets.UTF_8)
-                } ?: throw IllegalStateException("Couldn't read that file.")
-                if (text.length > 10 * 1024 * 1024) {
-                    throw IllegalStateException("File is too large to be a library backup.")
+            // File read + JSON parse off Main.
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    val text = appContext.contentResolver.openInputStream(uri)?.use { input ->
+                        input.readBytes().toString(Charsets.UTF_8)
+                    } ?: throw IllegalStateException("Couldn't read that file.")
+                    if (text.length > 10 * 1024 * 1024) {
+                        throw IllegalStateException("File is too large to be a library backup.")
+                    }
+                    text
                 }
-                songRepository.describeImport(text)
-                    .onSuccess { preview ->
-                        lastImportJson = text
-                        val name = uri.lastPathSegment?.substringAfterLast('/')?.substringAfterLast(':')
-                        _uiState.update {
-                            it.copy(importFileName = name, importPreview = preview)
-                        }
-                    }
-                    .onFailure { e ->
-                        _uiState.update { it.copy(importError = e.message) }
-                    }
-            } catch (e: Exception) {
-                _uiState.update { it.copy(importError = e.message ?: "Couldn't read that file.") }
             }
+            val text = result.getOrElse { e ->
+                _uiState.update { it.copy(importError = e.message ?: "Couldn't read that file.") }
+                return@launch
+            }
+            val preview = withContext(Dispatchers.IO) {
+                songRepository.describeImport(text)
+            }
+            preview
+                .onSuccess { parsed ->
+                    lastImportJson = text
+                    val name = uri.lastPathSegment?.substringAfterLast('/')?.substringAfterLast(':')
+                    _uiState.update {
+                        it.copy(importFileName = name, importPreview = parsed)
+                    }
+                }
+                .onFailure { e ->
+                    _uiState.update { it.copy(importError = e.message) }
+                }
         }
     }
 
@@ -233,11 +264,15 @@ class BackupViewModel @Inject constructor(
                     importDone = 0, importTotal = it.importPreview?.total ?: 0, importCurrent = ""
                 )
             }
-            songRepository.importLibraryJson(json) { done, total, current ->
-                _uiState.update {
-                    it.copy(importDone = done, importTotal = total, importCurrent = current)
+            // Parse + restore run off Main; progress updates are thread-safe.
+            val result = withContext(Dispatchers.IO) {
+                songRepository.importLibraryJson(json) { done, total, current ->
+                    _uiState.update {
+                        it.copy(importDone = done, importTotal = total, importCurrent = current)
+                    }
                 }
-            }.onSuccess { summary ->
+            }
+            result.onSuccess { summary ->
                 _uiState.update { it.copy(importWorking = false, importSummary = summary) }
             }.onFailure { e ->
                 _uiState.update {

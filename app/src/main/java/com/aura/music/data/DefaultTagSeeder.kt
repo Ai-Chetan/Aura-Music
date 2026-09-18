@@ -3,6 +3,7 @@ package com.aura.music.data
 import com.aura.music.data.db.SongDao
 import com.aura.music.data.db.TagDao
 import com.aura.music.data.db.TagEntity
+import com.aura.music.ui.theme.TagColors
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -18,21 +19,20 @@ class DefaultTagSeeder @Inject constructor(
     suspend fun seedIfEmpty() {
         if (songDao.getSongCount() > 0) return
 
-        // Starter set: 2 languages, 4 moods, 2 activities — all in the
-        // blue→cyan family so selected chips stay readable on dark UI.
-        val tagColors = listOf(
-            "english" to "#22D3EE",
-            "hindi" to "#FBBF24",
-            "sad" to "#2563EB",
-            "chill" to "#38BDF8",
-            "party" to "#E879F9",
-            "romance" to "#F87171",
-            "workout" to "#FB923C",
-            "focus" to "#60A5FA"
+        // Starter set on the controlled semantic palette (TagColors).
+        val starters = listOf(
+            "chill", "dark", "emotional", "english",
+            "focus", "hindi", "party", "retro",
+            "sad", "workout", "romance"
         )
 
-        tagColors.forEach { (name, color) ->
-            tagDao.insertTag(TagEntity(name = name, colorHex = color))
+        starters.forEach { name ->
+            tagDao.insertTag(
+                TagEntity(
+                    name = name,
+                    colorHex = TagColors.semanticFor(name) ?: TagColors.Palette.first()
+                )
+            )
         }
     }
 }

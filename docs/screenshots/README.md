@@ -1,5 +1,9 @@
 # Screenshots
 
+> The app UI has been redesigned since these shots were taken (new Library,
+> combined Add section, onboarding). They are kept as placeholders — fresh
+> screenshots are on the way. Match the new UI when retaking.
+
 App screenshots used by the root `README.md` gallery. All are 907×2048 —
 keep that size when replacing any shot so the gallery rows stay aligned.
 

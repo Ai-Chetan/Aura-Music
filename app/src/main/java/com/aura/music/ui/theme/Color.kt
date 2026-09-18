@@ -2,44 +2,49 @@ package com.aura.music.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Aura dark theme: deep dark base + vivid blue/cyan accent.
-val Background = Color(0xFF0C131B)
-val Surface = Color(0xFF141F2B)
-val SurfaceVariant = Color(0xFF1C2A3A)
-val SurfaceElevated = Color(0xFF24344A)
+// Aura — Midnight Cyan palette.
+// Interaction color is #38BDF8 ONLY: play/pause, selected nav,
+// active controls, progress, primary buttons, key highlights.
+// Surfaces stay navy; text stays near-white / slate.
 
-// Vibrant accent colors
-val Primary = Color(0xFF38BDF8)      // Sky blue accent
+val Background = Color(0xFF07131F)          // Deep Navy — primary background
+val BackgroundLighter = Color(0xFF0B1D2A)   // Navy Blue — secondary background
+val BackgroundDarkest = Color(0xFF040C14)
+
+val Surface = Color(0xFF102A3A)             // Dark Blue — cards / surfaces
+val SurfaceVariant = Color(0xFF163548)      // Elevated — selected card, tracks, inputs
+val SurfaceElevated = Color(0xFF163548)     // Elevated surface
+
+val Border = Color(0xFF34495A)              // Blue Gray — borders
+
+// Interaction accents — use sparingly, only for actions + active states.
+val Primary = Color(0xFF38BDF8)             // Electric Cyan — primary action
 val PrimaryContainer = Color(0xFF7DD3FC)
-val OnPrimary = Color(0xFF04121A)
+val OnPrimary = Color(0xFF07131F)
 
-val Secondary = Color(0xFF00D2FF)    // Cyan end of the signature blue→cyan gradient
-val SecondaryContainer = Color(0xFF38BDF8) // Sky blue — selected-chip fill, readable with dark text
-val OnSecondary = Color(0xFF04121A)
+val Secondary = Color(0xFF22B8F0)           // Bright Cyan — hover/pressed, progress end
+val SecondaryContainer = Color(0xFF38BDF8)  // Selected-chip fill, readable with dark text
+val OnSecondary = Color(0xFF07131F)
 
-val Accent = Color(0xFFEC4899)       // Pink/Hot Pink
-val AccentContainer = Color(0xFFF472B6)
+val Accent = Color(0xFFA78BFA)
+val AccentContainer = Color(0xFFC084FC)
 
-// Text with proper contrast
-val TextPrimary = Color(0xFFF8FAFC)
-val TextSecondary = Color(0xFF94A3B8)
-val TextTertiary = Color(0xFF64748B)
-val TextMuted = Color(0xFF475569)
-
-// Background variations
-val BackgroundLighter = Color(0xFF121E2B)
-val BackgroundDarkest = Color(0xFF070D14)
+// Text with proper contrast on #07131F
+val TextPrimary = Color(0xFFF5F7FA)         // Almost White
+val TextSecondary = Color(0xFF94A9BD)       // Slate Blue
+val TextTertiary = Color(0xFF647B8F)        // Muted
+val TextMuted = Color(0xFF647B8F)
 
 // Glass + gradient tokens for frosted surfaces over the ambient background.
-val GlassFill = Color(0xFF000000).copy(alpha = 0.4f)
-val GlassBorder = Color(0xFFFFFFFF).copy(alpha = 0.1f)
+val GlassFill = Color(0xFF102A3A).copy(alpha = 0.6f)
+val GlassBorder = Border.copy(alpha = 0.7f)
 val GradientBlue = Color(0xFF38BDF8)
-val GradientCyan = Color(0xFF22D3EE)
+val GradientCyan = Color(0xFF22B8F0)
 
 // Quality badges: BEST amber for top bitrate, HQ green otherwise.
-val BadgeHq = Color(0xFF22C55E)
-val BadgeBest = Color(0xFFF59E0B)
+val BadgeHq = Color(0xFF22C55E)             // Emerald — success
+val BadgeBest = Color(0xFFF59E0B)           // Amber — warning
 
-// Error
-val Error = Color(0xFFEF4444)
-val OnError = Color(0xFFFFFFFF)
+// Error — Coral Red, dark text for contrast on chips/buttons.
+val Error = Color(0xFFF87171)
+val OnError = Color(0xFF07131F)

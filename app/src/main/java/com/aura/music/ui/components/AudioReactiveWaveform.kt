@@ -16,8 +16,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aura.music.ui.theme.GradientCyan
 import com.aura.music.ui.theme.GradientBlue
+import kotlinx.coroutines.flow.StateFlow
 import kotlin.math.PI
 import kotlin.math.sin
 
@@ -25,16 +27,20 @@ import kotlin.math.sin
  * Music-reactive waveform: rounded bars driven by live FFT magnitudes while
  * playing, dissolving into a gentle idle wave when paused (or when the
  * device can't provide audio data — the idle path always works).
+ *
+ * Takes the flow (not a snapshot array) so the ~10Hz visualizer emissions
+ * recompose only this Canvas node instead of the whole player screen.
  */
 @Composable
 fun AudioReactiveWaveform(
-    magnitudes: FloatArray,
+    flow: StateFlow<FloatArray>,
     isPlaying: Boolean,
     modifier: Modifier = Modifier,
     barCount: Int = 48,
     primaryColor: Color = GradientBlue,
     secondaryColor: Color = GradientCyan
 ) {
+    val magnitudes by flow.collectAsStateWithLifecycle()
     val transition = rememberInfiniteTransition(label = "reactiveWave")
     val phase by transition.animateFloat(
         initialValue = 0f,

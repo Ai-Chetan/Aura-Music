@@ -45,8 +45,16 @@ Anyone who wants a private, on-device music vault on Android: paste links, curat
 | 8 | Media notification | Album art, title/artist, transport controls |
 | 9 | Lock-screen media panel | Native `MediaSession`-driven controls |
 | 10 | Library backup & restore | JSON export/import with tag merge + re-download |
-| 11 | Futuristic animated UI | Compose theme, ambient background, audio-reactive waveform |
+| 11 | Futuristic animated UI | Compose theme, ambient background (animated on Now Playing only), audio-reactive waveform |
 | 12 | Local search | By title/artist |
+| 13 | Getting Started guide | Skippable first-launch tour with coach tips + starter tracks that download in the background |
+| 14 | YouTube Music search + instant streaming | Search songs, tap to stream without saving or save to the vault |
+| 15 | Combined Add section | Search and paste-link under one segmented toggle |
+| 16 | Library sort modes | Recent/oldest, title A–Z/Z–A, artist A–Z, longest/shortest; auto-scrolls to top |
+| 17 | Live download queue | Collapsible overall-% card, per-song progress, cancel, starter-batch error report with retry |
+| 18 | Navigation-proof playlist imports | Whole-playlist WorkManager import with live Library progress |
+
+> **Note:** screenshots in `README.md` and `docs/screenshots/` predate the current UI (new Library, Add section, onboarding). Refreshed shots are on the way.
 
 ## 6. Later milestones
 

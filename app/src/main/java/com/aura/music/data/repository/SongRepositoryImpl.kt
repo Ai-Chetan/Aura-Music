@@ -1,6 +1,7 @@
 package com.aura.music.data.repository
 
 import android.content.Context
+import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.Data
 import androidx.work.NetworkType
@@ -12,18 +13,31 @@ import com.aura.music.data.db.SongDao
 import com.aura.music.data.db.SongEntity
 import com.aura.music.data.db.SongWithTags
 import com.aura.music.data.download.DownloadAudioWorker
+import com.aura.music.data.download.PlaylistImportWorker
+import com.aura.music.domain.repository.ActiveDownload
+import com.aura.music.domain.repository.BatchItem
 import com.aura.music.domain.repository.ExtractedStreamInfo
+import com.aura.music.domain.repository.FailedDownload
+import com.aura.music.domain.repository.PlaylistImportState
+import com.aura.music.domain.repository.STARTER_STAGGER_SECONDS
+import com.aura.music.domain.repository.StarterBatchStatus
 import com.aura.music.domain.repository.ExtractionRepository
 import com.aura.music.domain.repository.ImportPreview
 import com.aura.music.domain.repository.ImportSummary
-import com.aura.music.domain.repository.PlaylistImportSummary
 import com.aura.music.domain.repository.PlaylistPreview
 import com.aura.music.domain.repository.SongRepository
 import com.aura.music.domain.repository.TagRepository
 import com.aura.music.util.YoutubeUrls
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
+import java.util.concurrent.TimeUnit
 import java.io.File
 import java.util.UUID
 import javax.inject.Inject
@@ -93,7 +107,7 @@ class SongRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun enqueueDownload(url: String): UUID {
+    override suspend fun enqueueDownload(url: String, initialDelaySeconds: Long): UUID {
         val canonical = YoutubeUrls.canonicalUrl(url)
         require(YoutubeUrls.isYouTubeUrl(canonical)) { YoutubeUrls.rejectionReason(url) }
 
@@ -108,7 +122,17 @@ class SongRepositoryImpl @Inject constructor(
         val workRequest = OneTimeWorkRequestBuilder<DownloadAudioWorker>()
             .setConstraints(constraints)
             .setInputData(inputData)
-            .addTag("aura-download")
+            // Transient YouTube errors (403/429) auto-retry in the worker;
+            // back off exponentially so retries don't hammer the server.
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+            .apply {
+                // Staggered batch starts: firing dozens of resolutions at once
+                // gets throttled (403 / "video unavailable" on valid links).
+                if (initialDelaySeconds > 0) {
+                    setInitialDelay(initialDelaySeconds, TimeUnit.SECONDS)
+                }
+            }
+            .addTag(DownloadAudioWorker.DOWNLOAD_TAG)
             .build()
 
         WorkManager.getInstance(context).enqueue(workRequest)
@@ -117,6 +141,125 @@ class SongRepositoryImpl @Inject constructor(
 
     override fun observeDownloadWork(workId: UUID): Flow<WorkInfo?> =
         WorkManager.getInstance(context).getWorkInfoByIdFlow(workId)
+
+    override fun observeActiveDownloads(): Flow<List<ActiveDownload>> =
+        WorkManager.getInstance(context)
+            .getWorkInfosByTagFlow(DownloadAudioWorker.DOWNLOAD_TAG)
+            .map { infos ->
+                infos
+                    .filter { !it.state.isFinished }
+                    .map { info ->
+                        val progress = info.progress
+                        ActiveDownload(
+                            workId = info.id,
+                            url = progress.getString(DownloadAudioWorker.KEY_URL).orEmpty(),
+                            title = progress.getString(DownloadAudioWorker.KEY_TITLE),
+                            stage = progress.getString(DownloadAudioWorker.KEY_PROGRESS)
+                                ?: DownloadAudioWorker.PROGRESS_RESOLVING,
+                            percent = progress.getInt(DownloadAudioWorker.KEY_PERCENT, 0),
+                            bytesDone = progress.getLong(DownloadAudioWorker.KEY_BYTES_DONE, -1L)
+                                .takeIf { it >= 0 },
+                            bytesTotal = progress.getLong(DownloadAudioWorker.KEY_BYTES_TOTAL, -1L)
+                                .takeIf { it > 0 }
+                        )
+                    }
+            }
+
+    override suspend fun cancelDownload(workId: UUID) {
+        WorkManager.getInstance(context).cancelWorkById(workId)
+    }
+
+    private val starterBatch = MutableStateFlow<List<BatchItem>?>(null)
+
+    override fun trackStarterBatch(items: List<BatchItem>) {
+        starterBatch.value = items.ifEmpty { null }
+    }
+
+    override fun clearStarterBatch() {
+        starterBatch.value = null
+    }
+
+    override fun observeStarterBatch(): Flow<StarterBatchStatus?> =
+        starterBatch.flatMapLatest { items ->
+            if (items.isNullOrEmpty()) {
+                flowOf(null)
+            } else {
+                // One shared tag-flow for the whole batch (not one flow per
+                // id — a 40-track batch would otherwise fan out to 40
+                // listeners re-firing on every progress tick).
+                WorkManager.getInstance(context)
+                    .getWorkInfosByTagFlow(DownloadAudioWorker.DOWNLOAD_TAG)
+                    .map { infos -> buildBatchStatus(items, infos.associateBy { it.id }) }
+            }
+        }
+
+    private fun buildBatchStatus(
+        items: List<BatchItem>,
+        byId: Map<UUID, WorkInfo?>
+    ): StarterBatchStatus {
+        var succeeded = 0
+        val failed = mutableListOf<FailedDownload>()
+        items.forEach { item ->
+            val id = item.workId
+            if (id == null) {
+                failed += FailedDownload(
+                    label = item.label,
+                    url = item.url,
+                    error = item.enqueueError ?: "Couldn't start download."
+                )
+                return@forEach
+            }
+            val info = byId[id]
+            when {
+                info == null || !info.state.isFinished -> Unit // still running
+                info.state == WorkInfo.State.SUCCEEDED -> succeeded++
+                info.state == WorkInfo.State.CANCELLED ->
+                    failed += FailedDownload(item.label, item.url, "Download cancelled.")
+                else ->
+                    failed += FailedDownload(
+                        label = item.label,
+                        url = item.url,
+                        error = info.outputData.getString(DownloadAudioWorker.KEY_ERROR)
+                            ?: "Download failed."
+                    )
+            }
+        }
+        return StarterBatchStatus(
+            total = items.size,
+            succeeded = succeeded,
+            failed = failed,
+            finished = succeeded + failed.size >= items.size
+        )
+    }
+
+    override suspend fun retryStarterBatch() = withContext(Dispatchers.IO) {
+        val workManager = WorkManager.getInstance(context)
+        val current = starterBatch.value ?: return@withContext
+        // Stagger retries too, or the whole failed set gets throttled again.
+        var retryPosition = 0
+        starterBatch.value = current.map { item ->
+            val id = item.workId
+            val succeeded = try {
+                id != null &&
+                    workManager.getWorkInfoById(id).get()?.state == WorkInfo.State.SUCCEEDED
+            } catch (_: Exception) {
+                false
+            }
+            if (succeeded) {
+                item
+            } else {
+                val delaySeconds = (retryPosition++ * STARTER_STAGGER_SECONDS)
+                try {
+                    item.copy(
+                        workId = enqueueDownload(item.url, delaySeconds),
+                        enqueueError = null
+                    )
+                } catch (e: Exception) {
+                    item.copy(workId = null, enqueueError = e.message ?: "Couldn't start download.")
+                }
+            }
+        }
+    }
 
     override suspend fun previewFromUrl(url: String): Result<ExtractedStreamInfo> {
         return try {
@@ -163,75 +306,51 @@ class SongRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun importPlaylist(
-        url: String,
-        playlistTag: String?,
-        onProgress: (done: Int, total: Int, currentTitle: String) -> Unit
-    ): Result<PlaylistImportSummary> {
-        return try {
-            val canonical = YoutubeUrls.canonicalPlaylistUrl(url)
-            if (!YoutubeUrls.isPlaylistUrl(canonical)) {
-                return Result.failure(Exception(YoutubeUrls.rejectionReason(url)))
-            }
-            val playlist = extractionRepository.resolvePlaylist(canonical)
-            val urls = playlist.videoUrls
+    override suspend fun enqueuePlaylistImport(url: String, playlistTag: String?): UUID {
+        val canonical = YoutubeUrls.canonicalPlaylistUrl(url)
+        require(YoutubeUrls.isPlaylistUrl(canonical)) { YoutubeUrls.rejectionReason(url) }
 
-            val tagId = playlistTag?.trim()?.takeIf { it.isNotEmpty() }?.let { name ->
-                try {
-                    tagRepository.getOrCreateTag(name, null).takeIf { it > 0 }
-                } catch (_: Exception) {
-                    null
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+        val inputData = Data.Builder()
+            .putString(PlaylistImportWorker.KEY_URL, canonical)
+            .apply {
+                playlistTag?.trim()?.takeIf { it.isNotEmpty() }?.let { tag ->
+                    putString(PlaylistImportWorker.KEY_TAG, tag)
                 }
             }
+            .build()
 
-            var imported = 0
-            var skippedDuplicate = 0
-            var failed = 0
-            val errors = mutableListOf<String>()
+        val workRequest = OneTimeWorkRequestBuilder<PlaylistImportWorker>()
+            .setConstraints(constraints)
+            .setInputData(inputData)
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+            .addTag(PlaylistImportWorker.PLAYLIST_TAG)
+            .build()
 
-            urls.forEachIndexed { index, videoUrl ->
-                onProgress(index, urls.size, "Song ${index + 1} of ${urls.size}")
-                try {
-                    val existing = songDao.getBySourceUrl(videoUrl)
-                    val songId = if (existing != null) {
-                        skippedDuplicate++
-                        if (tagId != null) {
-                            try { tagRepository.addTagToSong(existing.id, tagId) } catch (_: Exception) { }
-                        }
-                        existing.id
-                    } else {
-                        val songId = addSongFromUrl(videoUrl).getOrElse { throw it }
-                        imported++
-                        if (tagId != null) {
-                            try { tagRepository.addTagToSong(songId, tagId) } catch (_: Exception) { }
-                        }
-                        songId
-                    }
-                    songId
-                } catch (e: Exception) {
-                    // Private/deleted/region-locked videos fail individually.
-                    failed++
-                    if (errors.size < 8) {
-                        errors.add("Song ${index + 1}: ${e.message ?: "download failed"}")
-                    }
-                }
-            }
-            onProgress(urls.size, urls.size, "")
-
-            Result.success(
-                PlaylistImportSummary(
-                    playlistTitle = playlist.title,
-                    total = urls.size,
-                    imported = imported,
-                    skippedDuplicate = skippedDuplicate,
-                    failed = failed,
-                    errors = errors
-                )
-            )
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+        WorkManager.getInstance(context).enqueue(workRequest)
+        return workRequest.id
     }
+
+    override fun observePlaylistImports(): Flow<List<PlaylistImportState>> =
+        WorkManager.getInstance(context)
+            .getWorkInfosByTagFlow(PlaylistImportWorker.PLAYLIST_TAG)
+            .map { infos ->
+                infos
+                    .filter { !it.state.isFinished }
+                    .map { info ->
+                        val progress = info.progress
+                        PlaylistImportState(
+                            workId = info.id,
+                            playlistTitle = progress.getString(PlaylistImportWorker.P_TITLE).orEmpty(),
+                            done = progress.getInt(PlaylistImportWorker.P_DONE, 0),
+                            total = progress.getInt(PlaylistImportWorker.P_TOTAL, 0),
+                            current = progress.getString(PlaylistImportWorker.P_CURRENT).orEmpty()
+                        )
+                    }
+            }
 
     override suspend fun deleteSong(songId: Long) {
         val song = songDao.getSongById(songId)
