@@ -12,7 +12,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -35,7 +35,9 @@ import androidx.navigation.navArgument
 import com.aura.music.ui.add.AddScreen
 import com.aura.music.ui.backup.BackupScreen
 import com.aura.music.ui.components.MiniPlayer
+import com.aura.music.ui.home.HomeScreen
 import com.aura.music.ui.library.LibraryScreen
+import com.aura.music.ui.settings.SettingsScreen
 import com.aura.music.ui.onboarding.OnboardingScreen
 import com.aura.music.ui.onboarding.OnboardingViewModel
 import com.aura.music.ui.player.NowPlayingScreen
@@ -43,15 +45,21 @@ import com.aura.music.ui.player.NowPlayingViewModel
 import com.aura.music.ui.songdetail.SongDetailScreen
 
 object Routes {
+    const val HOME = "home"
     const val LIBRARY = "library"
     const val ADD = "add"
-    const val ADD_PATTERN = "add?initialUrl={initialUrl}"
+    const val ADD_PATTERN = "add?initialUrl={initialUrl}&mode={mode}"
     const val NOW_PLAYING = "now_playing"
     const val BACKUP = "backup"
+    const val SETTINGS = "settings"
     const val ONBOARDING = "onboarding"
     const val SONG_DETAIL = "song/{songId}"
 
     fun songDetail(songId: Long): String = "song/$songId"
+
+    /** Add destination: mode 0 = Search, 1 = Paste link, null = auto. */
+    fun add(mode: Int? = null): String =
+        if (mode == null) ADD else "add?initialUrl=&mode=$mode"
 }
 
 @Composable
@@ -72,13 +80,13 @@ fun AuraNavHost(
         currentRoute != Routes.ONBOARDING
 
     // DataStore loads async — hold the graph until we know whether to
-    // start on onboarding (first launch) or library.
+    // start on onboarding (first launch) or home.
     if (onboardingCompleted == null) {
         Box(modifier = modifier.fillMaxSize())
         return
     }
     val startDestination =
-        if (onboardingCompleted == false) Routes.ONBOARDING else Routes.LIBRARY
+        if (onboardingCompleted == false) Routes.ONBOARDING else Routes.HOME
 
     Box(modifier = modifier.fillMaxSize()) {
         Scaffold(
@@ -94,9 +102,14 @@ fun AuraNavHost(
                 ) {
                     if (currentTrack != null) {
                         MiniPlayer(
-                            onOpenPlayer = { navController.navigate(Routes.NOW_PLAYING) },
+                            onOpenPlayer = {
+                                navController.navigate(Routes.NOW_PLAYING) {
+                                    launchSingleTop = true
+                                }
+                            },
                             onTogglePlay = playerViewModel::togglePlayPause,
-                            onNext = playerViewModel::skipToNext
+                            onNext = playerViewModel::skipToNext,
+                            onPrevious = playerViewModel::skipToPrevious
                         )
                     }
                 }
@@ -104,11 +117,27 @@ fun AuraNavHost(
                     containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)
                 ) {
                     NavigationBarItem(
+                        selected = currentRoute == Routes.HOME,
+                        onClick = {
+                            navController.navigate(Routes.HOME) {
+                                popUpTo(Routes.HOME) { inclusive = false }
+                                launchSingleTop = true
+                            }
+                        },
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Default.Home,
+                                contentDescription = "Home"
+                            )
+                        },
+                        label = { Text("Home") }
+                    )
+                    NavigationBarItem(
                         selected = currentRoute == Routes.LIBRARY ||
                             (currentRoute?.startsWith("song/") == true),
                         onClick = {
                             navController.navigate(Routes.LIBRARY) {
-                                popUpTo(Routes.LIBRARY) { inclusive = false }
+                                popUpTo(Routes.HOME) { inclusive = false }
                                 launchSingleTop = true
                             }
                         },
@@ -119,22 +148,6 @@ fun AuraNavHost(
                             )
                         },
                         label = { Text("Library") }
-                    )
-                    NavigationBarItem(
-                        selected = currentRoute == Routes.ADD ||
-                            (currentRoute?.startsWith("add") == true),
-                        onClick = {
-                            navController.navigate(Routes.ADD) {
-                                launchSingleTop = true
-                            }
-                        },
-                        icon = {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = "Add"
-                            )
-                        },
-                        label = { Text("Add") }
                     )
                 }
             }
@@ -150,21 +163,27 @@ fun AuraNavHost(
                 popExitTransition = { slideOutHorizontally(targetOffsetX = { it / 6 }) + fadeOut() }
             ) {
         composable(Routes.ONBOARDING) {
-            OnboardingScreen(
-                onFinish = {
-                    onboardingViewModel.complete()
-                    navController.navigate(Routes.LIBRARY) {
+            // Guide finish returns to wherever the guide was opened from:
+            // first launch has no HOME to pop to (fresh start there), while a
+            // replay from Settings pops straight back out — no duplicate
+            // HOME, no stranded SETTINGS.
+            fun finishGuide() {
+                if (!navController.popBackStack(Routes.HOME, inclusive = false)) {
+                    navController.navigate(Routes.HOME) {
                         popUpTo(Routes.ONBOARDING) { inclusive = true }
                         launchSingleTop = true
                     }
+                }
+            }
+            OnboardingScreen(
+                onFinish = {
+                    onboardingViewModel.complete()
+                    finishGuide()
                 },
                 onDownloadSelected = { tracks ->
                     onboardingViewModel.downloadStarterTracks(tracks)
                     onboardingViewModel.complete()
-                    navController.navigate(Routes.LIBRARY) {
-                        popUpTo(Routes.ONBOARDING) { inclusive = true }
-                        launchSingleTop = true
-                    }
+                    finishGuide()
                 }
             )
         }
@@ -178,14 +197,39 @@ fun AuraNavHost(
                     navController.navigate(Routes.ADD)
                 },
                 onPlaySong = {
-                    navController.navigate(Routes.NOW_PLAYING)
+                    navController.navigate(Routes.NOW_PLAYING) {
+                        launchSingleTop = true
+                    }
                 },
-                onBackupClick = {
-                    navController.navigate(Routes.BACKUP)
-                },
-                onGuideClick = {
-                    navController.navigate(Routes.ONBOARDING)
+                onDiscoverClick = {
+                    navController.navigate(Routes.add(0))
                 }
+            )
+        }
+
+        composable(Routes.HOME) {
+            HomeScreen(
+                onPlayStarted = {
+                    navController.navigate(Routes.NOW_PLAYING) {
+                        launchSingleTop = true
+                    }
+                },
+                onOpenLibrary = {
+                    navController.navigate(Routes.LIBRARY) {
+                        launchSingleTop = true
+                    }
+                },
+                onOpenSettings = {
+                    navController.navigate(Routes.SETTINGS)
+                }
+            )
+        }
+
+        composable(Routes.SETTINGS) {
+            SettingsScreen(
+                onBack = { navController.popBackStack() },
+                onBackupClick = { navController.navigate(Routes.BACKUP) },
+                onGuideClick = { navController.navigate(Routes.ONBOARDING) }
             )
         }
 
@@ -196,21 +240,34 @@ fun AuraNavHost(
                     type = NavType.StringType
                     defaultValue = ""
                     nullable = true
+                },
+                navArgument("mode") {
+                    type = NavType.IntType
+                    defaultValue = -1
                 }
             )
         ) { backStackEntry ->
+            val modeArg = backStackEntry.arguments?.getInt("mode")?.takeIf { it in 0..1 }
             AddScreen(
                 initialUrl = backStackEntry.arguments?.getString("initialUrl"),
+                initialMode = modeArg,
                 onSongAdded = { songId ->
-                    navController.popBackStack(Routes.LIBRARY, inclusive = false)
+                    // Return to wherever Add was opened from, then show the song.
+                    navController.popBackStack()
                     navController.navigate(Routes.songDetail(songId))
                 },
                 onPlaylistDone = {
-                    navController.popBackStack(Routes.LIBRARY, inclusive = false)
+                    navController.popBackStack()
                 },
                 onPlayResult = {
-                    navController.navigate(Routes.NOW_PLAYING)
-                }
+                    navController.navigate(Routes.NOW_PLAYING) {
+                        launchSingleTop = true
+                    }
+                },
+                onOpenSettings = {
+                    navController.navigate(Routes.SETTINGS)
+                },
+                onBack = { navController.popBackStack() }
             )
         }
 

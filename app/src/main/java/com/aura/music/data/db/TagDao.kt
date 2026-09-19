@@ -12,9 +12,6 @@ interface TagDao {
     @Query("SELECT * FROM tags ORDER BY name ASC")
     fun getAllTags(): Flow<List<TagEntity>>
 
-    @Query("SELECT * FROM tags WHERE id = :tagId")
-    suspend fun getTagById(tagId: Long): TagEntity?
-
     @Query("SELECT * FROM tags WHERE name = :name")
     suspend fun getTagByName(name: String): TagEntity?
 
@@ -29,9 +26,6 @@ interface TagDao {
 
     @Delete
     suspend fun removeTagFromSong(crossRef: SongTagCrossRef)
-
-    @Query("DELETE FROM tags WHERE id = :tagId")
-    suspend fun deleteTagById(tagId: Long)
 
     @Query("SELECT * FROM tags WHERE id IN (SELECT tagId FROM song_tag_cross_ref WHERE songId = :songId) ORDER BY name ASC")
     fun getTagsForSong(songId: Long): Flow<List<TagEntity>>

@@ -2,6 +2,7 @@ package com.aura.music.ui.add
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -10,58 +11,82 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.ImeAction
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.aura.music.ui.addsong.AddSongPanel
 import com.aura.music.ui.addsong.AddSongViewModel
 import com.aura.music.ui.components.AmbientBackground
 import com.aura.music.ui.components.AuraToast
 import com.aura.music.ui.components.AuraTopBar
+import com.aura.music.ui.components.collectToast
 import com.aura.music.ui.search.SearchPanel
 import com.aura.music.ui.search.SearchViewModel
+import com.aura.music.ui.theme.AuraRadius
 import com.aura.music.ui.theme.AuraSpacing
+import com.aura.music.util.YoutubeUrls
 import kotlinx.coroutines.delay
 
 /**
- * Combined "add music" section: YouTube search and paste-a-link live side
- * by side under one segmented toggle, sharing the same chrome so both
- * flows look and feel like one place.
+ * One bar for everything: type a song/artist for results, or tap the link
+ * icon (or paste a URL — auto-detected) for the link/playlist download
+ * flow. No tabs, no modes to learn.
  */
 @Composable
 fun AddScreen(
     initialUrl: String? = null,
+    /** 0 = Search, 1 = Paste link, null = auto. */
+    initialMode: Int? = null,
     onSongAdded: (Long) -> Unit = {},
     onPlaylistDone: () -> Unit = {},
     onPlayResult: () -> Unit = {},
+    onOpenSettings: () -> Unit = {},
+    onBack: (() -> Unit)? = null,
     addSongViewModel: AddSongViewModel = hiltViewModel(),
     searchViewModel: SearchViewModel = hiltViewModel()
 ) {
-    // A prefilled link (deep link / shared URL) opens straight on Paste link.
-    var mode by rememberSaveable { mutableIntStateOf(if (!initialUrl.isNullOrBlank()) 1 else 0) }
+    // Prefilled links (shared URLs) land straight in link mode.
+    var text by rememberSaveable { mutableStateOf(initialUrl.orEmpty()) }
+    var linkMode by rememberSaveable {
+        mutableStateOf(initialMode?.coerceIn(0, 1) == 1 || !initialUrl.isNullOrBlank())
+    }
 
-    var toast by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(searchViewModel) {
-        searchViewModel.messages.collect { message ->
-            toast = message
-            delay(1800)
-            toast = null
+    val toast = collectToast(searchViewModel.messages)
+
+    fun submit() {
+        val trimmed = text.trim()
+        if (trimmed.isEmpty()) return
+        // Explicit toggle wins; otherwise a YouTube URL auto-routes to links.
+        // Link mode with plain text falls back to search instead of erroring.
+        val asLink = (linkMode || YoutubeUrls.isYouTubeUrl(trimmed)) &&
+            YoutubeUrls.isYouTubeUrl(trimmed)
+        linkMode = asLink
+        if (asLink) {
+            addSongViewModel.setUrl(trimmed)
+            addSongViewModel.preview()
+        } else {
+            searchViewModel.setQuery(trimmed)
+            searchViewModel.search()
         }
     }
 
@@ -74,60 +99,89 @@ fun AddScreen(
                 .windowInsetsPadding(WindowInsets.statusBars)
         ) {
             AuraTopBar(
-                title = "Add music",
-                subtitle = if (mode == 0) "Search YouTube" else "Best quality, saved as-is"
+                title = "Search music",
+                subtitle = if (linkMode) "Paste a video or playlist link" else "Search songs, stream or save",
+                onBack = onBack
             )
 
             Spacer(modifier = Modifier.height(AuraSpacing.Sm))
 
-            SingleChoiceSegmentedButtonRow(
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = AuraSpacing.Md)
-            ) {
-                SegmentedButton(
-                    selected = mode == 0,
-                    onClick = { mode = 0 },
-                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-                    icon = {
-                        SegmentedButtonDefaults.Icon(active = mode == 0) {
-                            Icon(
-                                imageVector = Icons.Default.Search,
-                                contentDescription = null
-                            )
-                        }
-                    },
-                    label = { Text("Search") }
-                )
-                SegmentedButton(
-                    selected = mode == 1,
-                    onClick = { mode = 1 },
-                    shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-                    icon = {
-                        SegmentedButtonDefaults.Icon(active = mode == 1) {
+                    .padding(horizontal = AuraSpacing.Md),
+                placeholder = { Text("Song, artist, or paste a link") },
+                leadingIcon = {
+                    Icon(
+                        imageVector = if (linkMode) Icons.Default.Link else Icons.Default.Search,
+                        contentDescription = null,
+                        tint = if (linkMode) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                trailingIcon = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(
+                            onClick = {
+                                linkMode = !linkMode
+                                // Flipping to link mode with a URL ready fetches it at once.
+                                if (linkMode && text.trim().isNotEmpty()) submit()
+                            }
+                        ) {
                             Icon(
                                 imageVector = Icons.Default.Link,
-                                contentDescription = null
+                                contentDescription = if (linkMode) "Link mode on" else "Search a link",
+                                tint = if (linkMode) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                    },
-                    label = { Text("Paste link") }
-                )
-            }
+                        if (text.isNotEmpty()) {
+                            IconButton(onClick = { text = "" }) {
+                                Icon(
+                                    imageVector = Icons.Default.Clear,
+                                    contentDescription = "Clear"
+                                )
+                            }
+                        }
+                    }
+                },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = { submit() }),
+                shape = RoundedCornerShape(AuraRadius.Md)
+            )
+
+            Spacer(modifier = Modifier.height(AuraSpacing.Xs))
+
+            Text(
+                text = if (linkMode) {
+                    "Link mode — videos, Shorts and playlists (up to 50 tracks)."
+                } else {
+                    "Results stream instantly, save, or download offline."
+                },
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = AuraSpacing.Lg)
+            )
 
             Spacer(modifier = Modifier.height(AuraSpacing.Sm))
 
-            if (mode == 0) {
-                SearchPanel(
-                    onPlayResult = onPlayResult,
-                    viewModel = searchViewModel,
-                    modifier = Modifier.weight(1f)
-                )
-            } else {
+            if (linkMode) {
                 AddSongPanel(
                     onSongAdded = onSongAdded,
                     onPlaylistDone = onPlaylistDone,
                     viewModel = addSongViewModel,
+                    showInput = false,
+                    modifier = Modifier.weight(1f)
+                )
+            } else {
+                SearchPanel(
+                    onPlayResult = onPlayResult,
+                    onOpenSettings = onOpenSettings,
+                    viewModel = searchViewModel,
+                    showInput = false,
                     modifier = Modifier.weight(1f)
                 )
             }

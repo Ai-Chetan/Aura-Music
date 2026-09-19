@@ -8,9 +8,12 @@ import com.aura.music.data.db.TagEntity
 import com.aura.music.domain.repository.SongRepository
 import com.aura.music.domain.repository.TagRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -32,12 +35,17 @@ data class SongDetailUiState(
 class SongDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val songRepository: SongRepository,
-    private val tagRepository: TagRepository
+    private val tagRepository: TagRepository,
+    private val playbackController: com.aura.music.playback.PlaybackController
 ) : ViewModel() {
 
     private val songId: Long = savedStateHandle.get<Long>("songId") ?: -1L
 
     private val song = MutableStateFlow<SongEntity?>(null)
+
+    /** One-shot user-facing errors (tag ops, loads) — collected as toasts. */
+    private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 4)
+    val messages: SharedFlow<String> = _messages.asSharedFlow()
 
     val uiState: StateFlow<SongDetailUiState> = combine(
         song,
@@ -57,30 +65,37 @@ class SongDetailViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            song.value = songRepository.getSongById(songId)
-        }
-    }
-
-    fun toggleTag(tag: TagEntity) {
-        viewModelScope.launch {
-            val currentSongTags = uiState.value.songTags
-            if (currentSongTags.any { it.id == tag.id }) {
-                tagRepository.removeTagFromSong(songId, tag.id)
-            } else {
-                tagRepository.addTagToSong(songId, tag.id)
+            try {
+                song.value = songRepository.getSongById(songId)
+            } catch (_: Exception) {
+                // uiState keeps song=null → the screen shows its not-found state.
             }
         }
     }
 
+    /** Plays this song as a fresh queue (song detail previously was a dead end). */
+    fun playSong() {
+        val current = song.value ?: return
+        playbackController.playQueue(listOf(current), 0)
+    }
+
     fun addTagById(tagId: Long) {
         viewModelScope.launch {
-            tagRepository.addTagToSong(songId, tagId)
+            try {
+                tagRepository.addTagToSong(songId, tagId)
+            } catch (e: Exception) {
+                _messages.tryEmit(e.message ?: "Couldn't add tag")
+            }
         }
     }
 
     fun removeTagById(tagId: Long) {
         viewModelScope.launch {
-            tagRepository.removeTagFromSong(songId, tagId)
+            try {
+                tagRepository.removeTagFromSong(songId, tagId)
+            } catch (e: Exception) {
+                _messages.tryEmit(e.message ?: "Couldn't remove tag")
+            }
         }
     }
 
@@ -88,10 +103,13 @@ class SongDetailViewModel @Inject constructor(
         viewModelScope.launch {
             val trimmed = name.trim()
             if (trimmed.isBlank()) return@launch
-
-            val tagId = tagRepository.getOrCreateTag(trimmed)
-            if (tagId > 0) {
-                tagRepository.addTagToSong(songId, tagId)
+            try {
+                val tagId = tagRepository.getOrCreateTag(trimmed)
+                if (tagId > 0) {
+                    tagRepository.addTagToSong(songId, tagId)
+                }
+            } catch (e: Exception) {
+                _messages.tryEmit(e.message ?: "Couldn't create tag")
             }
         }
     }

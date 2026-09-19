@@ -40,6 +40,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -105,7 +106,9 @@ fun OnboardingScreen(
     val isLastPage = pagerState.currentPage == STARTER_PAGE_INDEX
 
     // Starter-track multi-select, hoisted so the bottom CTA can react.
-    val selected = remember { mutableStateOf(setOf<String>()) }
+    // Saveable as a List (Sets aren't Bundle-saveable) so rotation never
+    // wipes the user's picks.
+    val selected = rememberSaveable { mutableStateOf(listOf<String>()) }
     fun toggle(url: String) {
         selected.value = if (url in selected.value) selected.value - url
         else selected.value + url
@@ -151,12 +154,12 @@ fun OnboardingScreen(
                     CoachStepContent(step = GUIDE_STEPS[page])
                 } else {
                     StarterSelectPage(
-                        selected = selected.value,
+                        selected = selected.value.toSet(),
                         onToggle = ::toggle,
                         onSelectAll = {
-                            selected.value = StarterTracks.tracks.map { it.url }.toSet()
+                            selected.value = StarterTracks.tracks.map { it.url }
                         },
-                        onClear = { selected.value = emptySet() }
+                        onClear = { selected.value = emptyList() }
                     )
                 }
             }
@@ -588,7 +591,7 @@ private fun StarterSelectPage(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(AuraSpacing.Sm)
         ) {
-            items(StarterTracks.tracks) { track ->
+            items(StarterTracks.tracks, key = { it.url }) { track ->
                 val isSelected = track.url in selected
                 GlassCard(
                     modifier = Modifier

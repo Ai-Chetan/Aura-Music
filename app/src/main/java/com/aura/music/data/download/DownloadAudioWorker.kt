@@ -1,10 +1,18 @@
 package com.aura.music.data.download
 
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.Context
+import android.content.pm.ServiceInfo
+import android.os.Build
+import androidx.core.app.NotificationCompat
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
+import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
+import com.aura.music.R
 import com.aura.music.data.db.SongDao
 import com.aura.music.data.extraction.isTransientYtError
 import com.aura.music.util.YoutubeUrls
@@ -12,6 +20,7 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlin.coroutines.cancellation.CancellationException
 
 @HiltWorker
 class DownloadAudioWorker @AssistedInject constructor(
@@ -38,8 +47,10 @@ class DownloadAudioWorker @AssistedInject constructor(
             if (existing != null) {
                 return@withContext Result.success(workDataOf(KEY_SONG_ID to existing.id))
             }
-        } catch (_: Exception) {
-            // Non-fatal; continue with download.
+        } catch (e: Exception) {
+            // Non-fatal; continue with download (worst case the IGNORE-insert
+            // dedupes at the end).
+            android.util.Log.w("DownloadAudioWorker", "Duplicate check failed", e)
         }
 
         try {
@@ -53,6 +64,12 @@ class DownloadAudioWorker @AssistedInject constructor(
                 when (event) {
                     is SongFileDownloader.Event.Resolved -> {
                         resolvedTitle = event.title
+                        // Long mixes can outlive background limits — promote
+                        // once the title is known so the OS keeps us alive.
+                        // Foreground promotion can be rejected (background
+                        // start limits); downloading on without it beats
+                        // failing a perfectly good download.
+                        runCatching { setForeground(foregroundInfo(event.title)) }
                         setProgress(
                             workDataOf(
                                 KEY_PROGRESS to PROGRESS_DOWNLOADING,
@@ -83,6 +100,11 @@ class DownloadAudioWorker @AssistedInject constructor(
             reportStage(PROGRESS_DONE, percent = 100, url = canonicalUrl)
 
             Result.success(workDataOf(KEY_SONG_ID to songId))
+        } catch (e: CancellationException) {
+            // Stopped (app closed, constraints lost, timeout): rethrow so
+            // WorkManager reschedules instead of recording a failure — the
+            // download resumes instead of being discarded.
+            throw e
         } catch (e: Exception) {
             // Transient YouTube/network hiccups (throttling, timeouts,
             // expired stream URLs) are worth an automatic retry with
@@ -104,6 +126,38 @@ class DownloadAudioWorker @AssistedInject constructor(
         setProgress(builder.build())
     }
 
+    override suspend fun getForegroundInfo(): ForegroundInfo =
+        foregroundInfo("Downloading song…")
+
+    private fun foregroundInfo(title: String): ForegroundInfo {
+        val ctx = applicationContext
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val manager = ctx.getSystemService(NotificationManager::class.java)
+            manager.createNotificationChannel(
+                NotificationChannel(
+                    CHANNEL_ID,
+                    "Downloads",
+                    NotificationManager.IMPORTANCE_LOW
+                )
+            )
+        }
+        val notification: Notification = NotificationCompat.Builder(ctx, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle(title)
+            .setContentText("Saving to your vault — safe to leave the app.")
+            .setOngoing(true)
+            .build()
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            ForegroundInfo(
+                NOTIFICATION_ID,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+            )
+        } else {
+            ForegroundInfo(NOTIFICATION_ID, notification)
+        }
+    }
+
     companion object {
         const val KEY_URL = "url"
         const val KEY_TITLE = "title"
@@ -121,5 +175,8 @@ class DownloadAudioWorker @AssistedInject constructor(
 
         /** WorkManager tag applied to every audio download (used for the Library queue). */
         const val DOWNLOAD_TAG = "aura-download"
+
+        private const val CHANNEL_ID = "aura_downloads"
+        private const val NOTIFICATION_ID = 42
     }
 }

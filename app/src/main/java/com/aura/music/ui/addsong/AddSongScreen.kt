@@ -47,6 +47,8 @@ import com.aura.music.ui.components.GlassCard
 import com.aura.music.ui.components.QualityBadge
 import com.aura.music.ui.theme.AuraRadius
 import com.aura.music.ui.theme.AuraSpacing
+import com.aura.music.util.downloadBytesDetail
+import com.aura.music.util.downloadStageLabel
 import com.aura.music.util.formatDuration
 
 @Composable
@@ -54,11 +56,13 @@ fun AddSongPanel(
     onSongAdded: (Long) -> Unit,
     onPlaylistDone: () -> Unit,
     viewModel: AddSongViewModel = hiltViewModel(),
+    showInput: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     Column(modifier = modifier.fillMaxWidth()) {
+            if (showInput) {
             OutlinedTextField(
                 value = state.url,
                 onValueChange = viewModel::setUrl,
@@ -82,11 +86,12 @@ fun AddSongPanel(
             )
 
             Spacer(modifier = Modifier.height(AuraSpacing.Sm))
+            }
 
             val ctaLabel = when (val phase = state.phase) {
                 is AddSongPhase.Idle,
                 is AddSongPhase.Error,
-                is AddSongPhase.Resolving -> if (state.isPlaylistUrl) "Fetch" else "Fetch"
+                is AddSongPhase.Resolving -> "Fetch"
                 is AddSongPhase.Preview -> "Download"
                 is AddSongPhase.PreviewPlaylist -> "Download ${phase.preview.importable}"
                 is AddSongPhase.Downloading -> "Working…"
@@ -359,7 +364,7 @@ fun AddSongPanel(
                     ) {
                         Column(modifier = Modifier.padding(AuraSpacing.Md)) {
                             Text(
-                                text = stageLabel(phase.stage),
+                                text = downloadStageLabel(phase.stage),
                                 style = MaterialTheme.typography.titleSmall,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
@@ -375,7 +380,7 @@ fun AddSongPanel(
                             )
                             Spacer(modifier = Modifier.height(AuraSpacing.Xs))
                             Text(
-                                text = progressDetail(phase),
+                                text = downloadBytesDetail(phase.percent, phase.bytesDone, phase.bytesTotal),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -389,6 +394,12 @@ fun AddSongPanel(
                                     overflow = TextOverflow.Ellipsis
                                 )
                             }
+                            Spacer(modifier = Modifier.height(AuraSpacing.Xxs))
+                            Text(
+                                text = "Safe to leave — keeps downloading in Library.",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
                         }
                     }
                 }
@@ -501,7 +512,7 @@ fun AddSongPanel(
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.error
                             )
-                            TextButton(onClick = { viewModel.reset() }) {
+                            TextButton(onClick = viewModel::retry) {
                                 Text("Retry")
                             }
                         }
@@ -522,25 +533,4 @@ private fun phaseKey(phase: AddSongPhase): String = when (phase) {
     is AddSongPhase.Success -> "done"
     is AddSongPhase.PlaylistSuccess -> "doneList"
     is AddSongPhase.Error -> "error"
-}
-
-private fun stageLabel(stage: String): String = when (stage) {
-    "resolving" -> "Reading…"
-    "downloading" -> "Downloading…"
-    "saving" -> "Saving…"
-    "done" -> "Done"
-    else -> "Working…"
-}
-
-private fun progressDetail(phase: AddSongPhase.Downloading): String {
-    val mb = if (phase.bytesDone != null && phase.bytesTotal != null && phase.bytesTotal > 0) {
-        val done = phase.bytesDone / 1_048_576.0
-        val total = phase.bytesTotal / 1_048_576.0
-        "%.1f / %.1f MB".format(done, total)
-    } else if (phase.bytesDone != null && phase.bytesDone > 0) {
-        "%.1f MB".format(phase.bytesDone / 1_048_576.0)
-    } else {
-        null
-    }
-    return listOfNotNull("${phase.percent}%", mb).joinToString(" • ")
 }

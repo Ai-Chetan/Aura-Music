@@ -80,6 +80,7 @@ fun BackupScreen(
         ActivityResultContracts.CreateDocument("application/json")
     ) { uri ->
         if (uri != null) viewModel.writeExport(uri)
+        else viewModel.cancelExport()
     }
     val openLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
@@ -90,7 +91,8 @@ fun BackupScreen(
     // Fire the system save dialog exactly once per prepared export.
     val pendingName = state.pendingExportName
     val pendingJson = state.pendingExportJson
-    LaunchedEffect(pendingName, pendingJson) {
+    val pendingSeq = state.pendingExportSeq
+    LaunchedEffect(pendingName, pendingJson, pendingSeq) {
         if (pendingName != null && pendingJson != null) {
             saveLauncher.launch(pendingName)
         }
@@ -252,7 +254,7 @@ fun BackupScreen(
                             horizontalArrangement = Arrangement.spacedBy(AuraSpacing.Xs),
                             contentPadding = PaddingValues(vertical = 2.dp)
                         ) {
-                            items(tags) { tag ->
+                            items(tags, key = { it.id }) { tag ->
                                 TagChip(
                                     name = tag.name,
                                     colorHex = tag.colorHex,
@@ -324,9 +326,9 @@ fun BackupScreen(
                     ) {
                         if (state.exportMessage != null) {
                             Text(
-                                text = if (state.exportMessage == "Library exported.") "Saved." else state.exportMessage!!,
+                                text = if (state.exportSucceeded) "Saved." else state.exportMessage!!,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = if (state.exportMessage == "Library exported.") {
+                                color = if (state.exportSucceeded) {
                                     MaterialTheme.colorScheme.primary
                                 } else {
                                     MaterialTheme.colorScheme.error

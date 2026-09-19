@@ -46,30 +46,29 @@ class OkHttpDownloader(
             throw IOException("Failed to execute request: ${e.message}", e)
         }
 
-        val responseCode = response.code
-        val responseBody = response.body?.string() ?: ""
-        val responseMessage = response.message
-        val responseHeaders = mutableMapOf<String, List<String>>()
+        response.use {
+            val responseCode = it.code
+            val responseBody = it.body?.string() ?: ""
+            val responseMessage = it.message
+            val responseHeaders = mutableMapOf<String, List<String>>()
 
-        response.headers.forEach { (name, value) ->
-            val existing = responseHeaders.getOrPut(name) { emptyList() }
-            responseHeaders[name] = existing + value
+            it.headers.forEach { (name, value) ->
+                val existing = responseHeaders.getOrPut(name) { emptyList() }
+                responseHeaders[name] = existing + value
+            }
+
+            if (responseCode == 429) {
+                throw ReCaptchaException("reCaptcha Challenge requested", url)
+            }
+
+            return Response(
+                responseCode,
+                responseMessage,
+                responseHeaders,
+                responseBody,
+                url
+            )
         }
-
-        if (responseCode == 429) {
-            response.close()
-            throw ReCaptchaException("reCaptcha Challenge requested", url)
-        }
-
-        response.close()
-
-        return Response(
-            responseCode,
-            responseMessage,
-            responseHeaders,
-            responseBody,
-            url
-        )
     }
 
     companion object {

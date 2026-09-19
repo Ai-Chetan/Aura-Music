@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aura.music.ui.theme.TagColors
@@ -25,7 +26,9 @@ fun TagChip(
     colorHex: String?,
     selected: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** False for read-only display chips (no tap handling, no button role). */
+    enabled: Boolean = true
 ) {
     val baseColor = parseTagColor(TagColors.displayFor(name, colorHex))
     val containerColor = if (selected) baseColor else baseColor.copy(alpha = 0.12f)
@@ -43,7 +46,7 @@ fun TagChip(
                 color = baseColor.copy(alpha = if (selected) 0f else 0.45f),
                 shape = chipShape
             )
-            .clickable(onClick = onClick)
+            .clickable(onClick = onClick, enabled = enabled, role = Role.Button)
             .defaultMinSize(minHeight = 30.dp)
             .padding(horizontal = 10.dp, vertical = 5.dp)
     )

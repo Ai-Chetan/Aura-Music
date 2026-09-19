@@ -3,6 +3,6 @@
     <style name="Theme.Aura" parent="android:Theme.Material.NoActionBar">
         <item name="android:statusBarColor">#00000000</item>
         <item name="android:navigationBarColor">#00000000</item>
-        <item name="android:windowBackground">#FF050508</item>
+        <item name="android:windowBackground">#FF07131F</item>
     </style>
 </resources>

@@ -1,6 +1,5 @@
 package com.aura.music.ui.theme
 
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Shapes
 import androidx.compose.ui.unit.dp
@@ -33,12 +32,3 @@ val AuraShapes = Shapes(
     large = RoundedCornerShape(16.dp),
     extraLarge = RoundedCornerShape(20.dp)
 )
-
-/** Cheap, consistent motion: fades + small slides only. Nothing heavy. */
-object AuraMotion {
-    const val Fast = 150
-    const val Medium = 250
-
-    fun <T> fast() = tween<T>(durationMillis = Fast)
-    fun <T> medium() = tween<T>(durationMillis = Medium)
-}

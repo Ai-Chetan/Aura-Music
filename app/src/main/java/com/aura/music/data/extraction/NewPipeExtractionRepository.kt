@@ -1,7 +1,6 @@
 package com.aura.music.data.extraction
 
 import android.util.Log
-import com.aura.music.domain.repository.DownloadResult
 import com.aura.music.domain.repository.ExtractedPlaylist
 import com.aura.music.domain.repository.ExtractedStreamInfo
 import com.aura.music.domain.repository.ExtractionRepository
@@ -9,14 +8,12 @@ import com.aura.music.domain.repository.YouTubeTrack
 import com.aura.music.util.YoutubeUrls
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import okhttp3.OkHttpClient
-import okhttp3.Request
 import org.schabi.newpipe.extractor.NewPipe
 import org.schabi.newpipe.extractor.ServiceList
 import org.schabi.newpipe.extractor.stream.AudioStream
 import org.schabi.newpipe.extractor.stream.StreamInfo
-import java.io.File
-import java.io.FileOutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -42,10 +39,13 @@ class NewPipeExtractionRepository @Inject constructor(
                 YoutubeUrls.rejectionReason(url)
             }
             // Gated + polite backoff: never burst the player API, never spin
-            // on validation errors.
+            // on validation errors. Hard deadline: a slow-drip resolve must
+            // not hold one of the 3 gate permits (and the UI) for minutes.
             try {
                 ytGate.withPermit {
-                    ytRetry { resolveOnce(canonical) }
+                    withTimeout(RESOLVE_TIMEOUT_MS) {
+                        ytRetry { resolveOnce(canonical) }
+                    }
                 }
             } catch (e: Exception) {
                 Log.e("NewPipeRepo", "Stream info extraction failed", e)
@@ -74,7 +74,9 @@ class NewPipeExtractionRepository @Inject constructor(
             var lastError: Exception? = null
             try {
                 return@withContext ytGate.withPermit {
-                    ytRetry { resolvePlaylistOnce(canonical) }
+                    withTimeout(RESOLVE_TIMEOUT_MS) {
+                        ytRetry { resolvePlaylistOnce(canonical) }
+                    }
                 }
             } catch (e: Exception) {
                 lastError = e
@@ -121,6 +123,94 @@ class NewPipeExtractionRepository @Inject constructor(
                 )
             }
         }
+
+    override suspend fun getTrendingMusic(maxResults: Int): List<YouTubeTrack> =
+        withContext(Dispatchers.IO) {
+            try {
+                ytGate.withPermit {
+                    ytRetry(maxAttempts = 2) { trendingOnce(maxResults) }
+                }
+            } catch (e: Exception) {
+                Log.w("NewPipeRepo", "trending music failed, falling back to search: ${e.message}")
+                // Charts is country-gated — fall back to a top-hits search so
+                // Discover never renders empty.
+                try {
+                    searchMusic("top hits today", maxResults.coerceIn(1, 50))
+                } catch (_: Exception) {
+                    emptyList()
+                }
+            }
+        }
+
+    override suspend fun getRelatedTracks(url: String, maxResults: Int): List<YouTubeTrack> =
+        withContext(Dispatchers.IO) {
+            val canonical = try {
+                YoutubeUrls.canonicalUrl(url)
+            } catch (_: Exception) {
+                return@withContext emptyList<YouTubeTrack>()
+            }
+            try {
+                ytGate.withPermit {
+                    ytRetry(maxAttempts = 2) { relatedOnce(canonical, maxResults) }
+                }
+            } catch (e: Exception) {
+                Log.w("NewPipeRepo", "related failed for $canonical: ${e.message}")
+                emptyList()
+            }
+        }
+
+    private fun trendingOnce(maxResults: Int): List<YouTubeTrack> {
+        val service = ServiceList.YouTube
+        val kioskList = service.kioskList
+        val extractor = kioskList.getExtractorById(TRENDING_MUSIC_KIOSK_ID, null)
+            ?: throw IllegalStateException("Trending music kiosk unavailable")
+        extractor.fetchPage()
+        val page = extractor.initialPage
+        return page.items
+            ?.asSequence()
+            ?.filterIsInstance<org.schabi.newpipe.extractor.stream.StreamInfoItem>()
+            ?.filter { !it.url.isNullOrBlank() && !it.name.isNullOrBlank() }
+            ?.take(maxResults.coerceIn(1, 50))
+            ?.map { item -> item.toTrack() }
+            ?.toList()
+            .orEmpty()
+            .also { require(it.isNotEmpty()) { "Trending list came back empty." } }
+    }
+
+    private fun relatedOnce(canonicalUrl: String, maxResults: Int): List<YouTubeTrack> {
+        val service = ServiceList.YouTube
+        val info = StreamInfo.getInfo(service, canonicalUrl)
+        val related = try {
+            info.relatedItems
+        } catch (_: Exception) {
+            null
+        }.orEmpty()
+        return related
+            .asSequence()
+            .filterIsInstance<org.schabi.newpipe.extractor.stream.StreamInfoItem>()
+            .filter { !it.url.isNullOrBlank() && !it.name.isNullOrBlank() }
+            .take(maxResults.coerceIn(1, 50))
+            .map { it.toTrack() }
+            .toList()
+    }
+
+    private fun org.schabi.newpipe.extractor.stream.StreamInfoItem.toTrack(): YouTubeTrack {
+        val durationSec = try { duration } catch (_: Exception) { -1L }
+        val thumb = try {
+            thumbnails?.maxByOrNull { t -> t.height * t.width }?.url
+                ?: thumbnails?.lastOrNull()?.url
+        } catch (_: Exception) {
+            null
+        }
+        val rawUrl = url!!
+        return YouTubeTrack(
+            url = try { YoutubeUrls.canonicalUrl(rawUrl) } catch (_: Exception) { rawUrl },
+            title = name!!,
+            artist = try { uploaderName?.takeIf { it.isNotBlank() } } catch (_: Exception) { null },
+            durationMs = if (durationSec > 0) durationSec * 1000 else 0L,
+            thumbnailUrl = thumb
+        )
+    }
 
     private fun searchOnce(query: String, maxResults: Int): List<YouTubeTrack> {
             val service = ServiceList.YouTube
@@ -212,6 +302,10 @@ class NewPipeExtractionRepository @Inject constructor(
     companion object {
         /** Hard cap so giant playlists can't run forever. */
         const val MAX_PLAYLIST_ITEMS = 50
+        /** YouTube Charts kiosk id for "Trending Music Videos". */
+        const val TRENDING_MUSIC_KIOSK_ID = "trending_music"
+        /** Wall-clock cap per extraction (all retry attempts included). */
+        const val RESOLVE_TIMEOUT_MS = 60_000L
     }
 
     private fun resolveOnce(canonicalUrl: String): ExtractedStreamInfo {
@@ -270,44 +364,5 @@ class NewPipeExtractionRepository @Inject constructor(
         }
         if (aac.isNotEmpty()) return aac.maxByOrNull { it.averageBitrate }
         return streams.maxByOrNull { it.averageBitrate }
-    }
-
-    override suspend fun downloadAudio(
-        streamInfo: ExtractedStreamInfo,
-        destination: File
-    ): DownloadResult = withContext(Dispatchers.IO) {
-        try {
-            destination.parentFile?.mkdirs()
-
-            val request = Request.Builder()
-                .url(streamInfo.bestAudioStreamUrl)
-                .build()
-
-            okHttpClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    throw RuntimeException("Download failed with HTTP ${response.code}")
-                }
-
-                val body = response.body
-                    ?: throw RuntimeException("Empty response body")
-
-                var bytesWritten = 0L
-                FileOutputStream(destination).use { output ->
-                    val buffer = ByteArray(8192)
-                    val source = body.byteStream()
-                    var bytesRead: Int
-                    while (source.read(buffer).also { bytesRead = it } != -1) {
-                        output.write(buffer, 0, bytesRead)
-                        bytesWritten += bytesRead
-                    }
-                    output.flush()
-                }
-
-                DownloadResult(file = destination, bytesWritten = bytesWritten)
-            }
-        } catch (e: Exception) {
-            Log.e("NewPipeRepo", "Audio download failed", e)
-            throw RuntimeException("Failed to download audio: ${e.message}", e)
-        }
     }
 }

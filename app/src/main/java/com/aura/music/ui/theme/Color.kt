@@ -8,8 +8,6 @@ import androidx.compose.ui.graphics.Color
 // Surfaces stay navy; text stays near-white / slate.
 
 val Background = Color(0xFF07131F)          // Deep Navy — primary background
-val BackgroundLighter = Color(0xFF0B1D2A)   // Navy Blue — secondary background
-val BackgroundDarkest = Color(0xFF040C14)
 
 val Surface = Color(0xFF102A3A)             // Dark Blue — cards / surfaces
 val SurfaceVariant = Color(0xFF163548)      // Elevated — selected card, tracks, inputs
@@ -32,8 +30,6 @@ val AccentContainer = Color(0xFFC084FC)
 // Text with proper contrast on #07131F
 val TextPrimary = Color(0xFFF5F7FA)         // Almost White
 val TextSecondary = Color(0xFF94A9BD)       // Slate Blue
-val TextTertiary = Color(0xFF647B8F)        // Muted
-val TextMuted = Color(0xFF647B8F)
 
 // Glass + gradient tokens for frosted surfaces over the ambient background.
 val GlassFill = Color(0xFF102A3A).copy(alpha = 0.6f)

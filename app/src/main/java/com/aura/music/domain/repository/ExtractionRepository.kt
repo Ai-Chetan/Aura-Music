@@ -1,7 +1,5 @@
 package com.aura.music.domain.repository
 
-import java.io.File
-
 data class ExtractedStreamInfo(
     val title: String,
     val uploader: String?,
@@ -25,11 +23,6 @@ data class ExtractedStreamInfo(
         else -> "SD"
     }
 }
-
-data class DownloadResult(
-    val file: File,
-    val bytesWritten: Long
-)
 
 data class ExtractedPlaylist(
     val title: String,
@@ -60,8 +53,17 @@ interface ExtractionRepository {
     /** YouTube Music song search, best matches first (capped). */
     suspend fun searchMusic(query: String, maxResults: Int = 25): List<YouTubeTrack>
 
-    suspend fun downloadAudio(
-        streamInfo: ExtractedStreamInfo,
-        destination: File
-    ): DownloadResult
+    /**
+     * YouTube Charts "Trending Music" kiosk (what is hot right now).
+     * No API key, on-device via NewPipe. Falls back to a "top hits"
+     * music search when Charts is unavailable for the current country.
+     */
+    suspend fun getTrendingMusic(maxResults: Int = 30): List<YouTubeTrack>
+
+    /**
+     * Up-next style suggestions for one video (StreamInfo related items).
+     * Used for "Because you listened to X" recommendations. Never throws
+     * for empty — returns emptyList() when YouTube has nothing related.
+     */
+    suspend fun getRelatedTracks(url: String, maxResults: Int = 20): List<YouTubeTrack>
 }

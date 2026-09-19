@@ -33,6 +33,11 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -41,6 +46,8 @@ import androidx.compose.ui.unit.dp
 import com.aura.music.ui.theme.AuraRadius
 import com.aura.music.ui.theme.AuraSpacing
 import com.aura.music.ui.theme.GlassBorder
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.SharedFlow
 
 /**
  * Shared app chrome. Keeps every screen on the same grid:
@@ -208,10 +215,24 @@ fun AuraSearchField(
 }
 
 /**
- * App toast: SOLID surface card (never glass, never the default
- * near-white box), quick 200ms slide+fade in, 180ms out.
- * One message style app-wide; caller owns show/hide timing.
+ * One shared toast pipeline: collects one-shot messages, shows each for
+ * ~1.8s. Replaces the copy-pasted LaunchedEffect+delay block.
+ *
+ * Returns the current message (null when idle) for [AuraToast].
  */
+@Composable
+fun collectToast(messages: SharedFlow<String>): String? {
+    var toast by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(messages) {
+        messages.collect { message ->
+            toast = message
+            delay(1800)
+            toast = null
+        }
+    }
+    return toast
+}
+
 @Composable
 fun AuraToast(
     message: String?,

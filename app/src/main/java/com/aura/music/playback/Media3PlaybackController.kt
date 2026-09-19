@@ -9,7 +9,10 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
+import com.aura.music.data.db.SongDao
+import com.aura.music.data.db.QueueStateDao
 import com.aura.music.data.db.SongEntity
+import com.aura.music.data.stream.StreamResolver
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -23,13 +26,17 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class Media3PlaybackController @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val audioVisualizer: AudioVisualizer
+    private val audioVisualizer: AudioVisualizer,
+    private val streamResolver: StreamResolver,
+    private val songDao: SongDao,
+    private val queueStateDao: QueueStateDao
 ) : PlaybackController {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -42,10 +49,16 @@ class Media3PlaybackController @Inject constructor(
 
     override val waveform: StateFlow<FloatArray> = audioVisualizer.buckets
 
-    // Cache of songs currently in the queue, keyed by song ID
-    private val songCache = mutableMapOf<Long, SongEntity>()
+    // Cache of songs currently in the queue, keyed by song ID.
+    // LinkedHashMap so trimSongCache can evict insertion-oldest.
+    private val songCache = LinkedHashMap<Long, SongEntity>()
     // Queue play requests until the MediaController connects.
     private var pendingQueue: Pair<List<SongEntity>, Int>? = null
+
+    companion object {
+        /** Song-metadata cache cap (queue mapping only — audio bytes live in SimpleCache). */
+        private const val SONG_CACHE_MAX = 400
+    }
 
     private val playerListener = object : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -98,7 +111,13 @@ class Media3PlaybackController @Inject constructor(
             pendingQueue?.let { (songs, index) ->
                 pendingQueue = null
                 playQueue(songs, index)
-            } ?: updateState()
+            } ?: run {
+                updateState()
+                // Cold start with an empty player: bring back the last
+                // session (queue + position, paused) so the song the user
+                // was listening to is sitting in the mini-player on return.
+                restoreLastSession()
+            }
         }, MoreExecutors.directExecutor())
     }
 
@@ -233,6 +252,8 @@ class Media3PlaybackController @Inject constructor(
     }
 
     override fun playQueue(songs: List<SongEntity>, startIndex: Int) {
+        if (songs.isEmpty()) return
+        val safeIndex = startIndex.coerceIn(0, songs.size - 1)
         val player = controller
         if (player == null) {
             songs.forEach { songCache[it.id] = it }
@@ -243,25 +264,37 @@ class Media3PlaybackController @Inject constructor(
         // Keep the cache in sync: updateState() maps player items through it,
         // and any miss would shift the sheet's indices off the player's.
         songs.forEach { songCache[it.id] = it }
+        trimSongCache()
         val mediaItems = songs.map { it.toMediaItem() }
-        player.setMediaItems(mediaItems, startIndex, 0L)
+        player.setMediaItems(mediaItems, safeIndex, 0L)
         player.prepare()
         player.playWhenReady = true
         updateState()
+        // Streaming queue: warm the next watch URLs so auto-advance doesn't
+        // stall on resolution. Downloaded files need no prefetch.
+        prefetchUpcoming(songs, startIndex)
     }
 
     override fun playNext(song: SongEntity) {
         val player = controller ?: return
         songCache[song.id] = song
+        trimSongCache()
 
-        val insertIndex = player.currentMediaItemIndex + 1
-        player.addMediaItem(insertIndex, song.toMediaItem())
+        // Empty queue (or no current item): appending == playing next.
+        if (player.mediaItemCount == 0 || player.currentMediaItemIndex < 0) {
+            player.addMediaItem(song.toMediaItem())
+        } else {
+            val insertIndex = (player.currentMediaItemIndex + 1)
+                .coerceIn(0, player.mediaItemCount)
+            player.addMediaItem(insertIndex, song.toMediaItem())
+        }
         updateState()
     }
 
     override fun addToQueueEnd(song: SongEntity) {
         val player = controller ?: return
         songCache[song.id] = song
+        trimSongCache()
 
         player.addMediaItem(song.toMediaItem())
         updateState()
@@ -324,7 +357,94 @@ class Media3PlaybackController @Inject constructor(
 
     override fun reorderQueue(fromIndex: Int, toIndex: Int) {
         val player = controller ?: return
+        if (fromIndex !in 0 until player.mediaItemCount) return
+        if (toIndex !in 0..player.mediaItemCount) return
         player.moveMediaItem(fromIndex, toIndex)
         updateState()
+    }
+
+    /**
+     * Cold-start resume: rebuilds the last queue from the DB snapshot
+     * (downloaded songs only — streaming URLs expire), anchored on the
+     * current vault song and clamped inside its duration, paused. Only runs
+     * when the player is otherwise empty.
+     */
+    private fun restoreLastSession() {
+        scope.launch(Dispatchers.IO) {
+            try {
+                val saved = queueStateDao.getQueueState() ?: return@launch
+                val ids = saved.songIdsJson.split(",")
+                    .mapNotNull { it.trim().toLongOrNull() }
+                    .filter { it > 0 }
+                if (ids.isEmpty()) return@launch
+                val byId = songDao.getSongsByIds(ids).associateBy { it.id }
+                val ordered = ids.mapNotNull { byId[it] }
+                if (ordered.isEmpty()) return@launch
+                // Anchor on the remembered vault song (mixed streaming tails
+                // shift raw indices); fall back to the stored index.
+                val index = ordered.indexOfFirst { it.id == saved.currentSongId }
+                    .takeIf { it >= 0 }
+                    ?: saved.currentIndex.coerceIn(0, ordered.size - 1)
+                val anchor = ordered[index]
+                val duration = anchor.durationMs
+                val position = when {
+                    saved.currentSongId <= 0 || saved.currentSongId != anchor.id -> 0L
+                    duration <= 0 -> 0L
+                    saved.positionMs >= duration - 5_000 -> 0L
+                    else -> saved.positionMs.coerceIn(0L, (duration - 3_000).coerceAtLeast(0L))
+                }
+                withContext(Dispatchers.Main) {
+                    val player = controller ?: return@withContext
+                    if (player.mediaItemCount != 0) return@withContext
+                    ordered.forEach { songCache[it.id] = it }
+                    trimSongCache()
+                    player.setMediaItems(
+                        ordered.map { it.toMediaItem() },
+                        index,
+                        position
+                    )
+                    player.shuffleModeEnabled = saved.shuffleEnabled
+                    player.repeatMode = when (saved.repeatMode) {
+                        "one" -> Player.REPEAT_MODE_ONE
+                        "all" -> Player.REPEAT_MODE_ALL
+                        else -> Player.REPEAT_MODE_OFF
+                    }
+                    player.prepare()
+                    player.playWhenReady = false
+                    updateState()
+                }
+            } catch (_: Exception) {
+                // Resume is best-effort; a fresh empty player is a fine fallback.
+            }
+        }
+    }
+
+    /** Bounded song cache: drops oldest entries past the cap. */
+    private fun trimSongCache() {
+        if (songCache.size <= SONG_CACHE_MAX) return
+        val iterator = songCache.entries.iterator()
+        var toDrop = songCache.size - SONG_CACHE_MAX
+        while (toDrop-- > 0 && iterator.hasNext()) {
+            iterator.next()
+            iterator.remove()
+        }
+    }
+
+    /** Prefetch watch URLs for the next streaming items in a just-started queue. */
+    private fun prefetchUpcoming(songs: List<SongEntity>, startIndex: Int) {
+        val upcoming = songs
+            .drop(startIndex + 1)
+            .take(5)
+            .mapNotNull { song ->
+                // Transient streaming rows carry the watch URL in sourceUrl
+                // and an http(s) audio URL in localFilePath. Downloaded rows
+                // point at a local file and need no warm-up.
+                val watch = song.sourceUrl.takeIf { it.isNotBlank() }
+                val isStreaming = song.localFilePath.startsWith("http") ||
+                    song.id < 0
+                if (isStreaming) watch else null
+            }
+            .filter { !streamResolver.isCached(it) }
+        if (upcoming.isNotEmpty()) streamResolver.prefetch(upcoming)
     }
 }

@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.work.WorkInfo
 import com.aura.music.data.download.DownloadAudioWorker
 import com.aura.music.data.download.PlaylistImportWorker
+import com.aura.music.data.network.NetworkGate
 import com.aura.music.domain.repository.ExtractedStreamInfo
 import com.aura.music.domain.repository.PlaylistPreview
 import com.aura.music.domain.repository.SongRepository
@@ -65,6 +66,7 @@ data class AddSongUiState(
 @HiltViewModel
 class AddSongViewModel @Inject constructor(
     private val songRepository: SongRepository,
+    private val gate: NetworkGate,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -101,6 +103,16 @@ class AddSongViewModel @Inject constructor(
             }
             return
         }
+        if (!gate.isAllowedNow()) {
+            _uiState.update {
+                it.copy(
+                    phase = AddSongPhase.Error(
+                        gate.snapshot().reason?.message() ?: "Couldn't read that link."
+                    )
+                )
+            }
+            return
+        }
         if (YoutubeUrls.isPlaylistUrl(url)) {
             previewPlaylist()
             return
@@ -121,12 +133,18 @@ class AddSongViewModel @Inject constructor(
                     }
                 }
                 .onFailure { throwable ->
-                    _uiState.update {
-                        it.copy(
-                            phase = AddSongPhase.Error(
-                                throwable.message ?: "Couldn't read that video."
-                            )
-                        )
+                    val message = throwable.message ?: "Couldn't read that video."
+                    // The pasted video is already saved but it came from a
+                    // playlist: don't reject the whole list — fall through to
+                    // the batch flow, where per-song duplicates are skipped
+                    // and unique songs still download.
+                    if (message.contains("Already in your library") && playlistOptionUrl != null) {
+                        _uiState.update { it.copy(url = playlistOptionUrl) }
+                        previewPlaylist()
+                    } else {
+                        _uiState.update {
+                            it.copy(phase = AddSongPhase.Error(message))
+                        }
                     }
                 }
         }
@@ -134,6 +152,16 @@ class AddSongViewModel @Inject constructor(
 
     private fun previewPlaylist() {
         val url = _uiState.value.url.trim()
+        if (!gate.isAllowedNow()) {
+            _uiState.update {
+                it.copy(
+                    phase = AddSongPhase.Error(
+                        gate.snapshot().reason?.message() ?: "Couldn't read that playlist."
+                    )
+                )
+            }
+            return
+        }
         downloadJob?.cancel()
         downloadJob = viewModelScope.launch {
             _uiState.update { it.copy(phase = AddSongPhase.Resolving) }
@@ -328,6 +356,12 @@ class AddSongViewModel @Inject constructor(
             is AddSongPhase.Idle, is AddSongPhase.Error -> preview()
             else -> Unit
         }
+    }
+
+    /** Retry the current URL without clearing it (unlike reset). */
+    fun retry() {
+        downloadJob?.cancel()
+        preview()
     }
 
     fun reset() {

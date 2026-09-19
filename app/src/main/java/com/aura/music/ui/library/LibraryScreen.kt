@@ -12,6 +12,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -26,21 +28,29 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.ImportExport
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.QueueMusic
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
@@ -50,6 +60,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
@@ -60,7 +71,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -69,9 +79,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -80,16 +89,23 @@ import com.aura.music.data.db.TagEntity
 import com.aura.music.domain.repository.ActiveDownload
 import com.aura.music.domain.repository.PlaylistImportState
 import com.aura.music.domain.repository.StarterBatchStatus
+import com.aura.music.ui.components.AlbumArt
 import com.aura.music.ui.components.AmbientBackground
 import com.aura.music.ui.components.AuraEmptyState
 import com.aura.music.ui.components.AuraSearchField
 import com.aura.music.ui.components.AuraToast
 import com.aura.music.ui.components.AuraTopBar
 import com.aura.music.ui.components.GlassCard
+import com.aura.music.ui.components.MediaRowShell
+import com.aura.music.ui.components.ShimmerList
 import com.aura.music.ui.components.SongRow
 import com.aura.music.ui.components.TagChip
+import com.aura.music.ui.components.collectToast
 import com.aura.music.ui.theme.AuraRadius
 import com.aura.music.ui.theme.AuraSpacing
+import com.aura.music.util.downloadBytesDetail
+import com.aura.music.util.downloadStageLabel
+import com.aura.music.util.formatDuration
 
 /** Rows composed in the first window; more load as the user scrolls. */
 private const val LIBRARY_PAGE_SIZE = 20
@@ -101,8 +117,7 @@ fun LibraryScreen(
     onSongClick: (Long) -> Unit = {},
     onAddSongClick: () -> Unit = {},
     onPlaySong: () -> Unit = {},
-    onBackupClick: () -> Unit = {},
-    onGuideClick: () -> Unit = {},
+    onDiscoverClick: (() -> Unit)? = null,
     viewModel: LibraryViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -110,20 +125,20 @@ fun LibraryScreen(
     val downloads by viewModel.activeDownloads.collectAsStateWithLifecycle()
     val playlistImports by viewModel.playlistImports.collectAsStateWithLifecycle()
     val batch by viewModel.starterBatch.collectAsStateWithLifecycle()
-    var toast by remember { mutableStateOf<String?>(null) }
+    val savedTracks by viewModel.savedTracks.collectAsStateWithLifecycle()
+    val savedResolvingUrl by viewModel.savedResolvingUrl.collectAsStateWithLifecycle()
+    val savedFilter by viewModel.savedFilterState.collectAsStateWithLifecycle()
+    val savedLoading by viewModel.savedLoading.collectAsStateWithLifecycle()
+    val savedSort by viewModel.savedSortMode.collectAsStateWithLifecycle()
+    val toast = collectToast(viewModel.messages)
     var sortMenuOpen by remember { mutableStateOf(false) }
-
-    LaunchedEffect(viewModel) {
-        viewModel.messages.collect { message ->
-            toast = message
-            delay(1800)
-            toast = null
-        }
-    }
+    // 0 = Downloaded (offline), 1 = Saved (streams, needs internet).
+    var tab by rememberSaveable { mutableIntStateOf(0) }
 
     // Delayed list entrance: lets the splash own the cold-start frames,
     // then the list glides in and is settled before the splash expands.
-    var listVisible by remember { mutableStateOf(false) }
+    // Saveable so rotation doesn't replay the entrance (or collapse paging).
+    var listVisible by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         delay(200)
         listVisible = true
@@ -132,14 +147,23 @@ fun LibraryScreen(
     val songListState = rememberLazyListState()
     // A new sort order reshuffles everything — jump back to the top so the
     // first song of the new order is visible without manual scrolling.
+    // Skips the very first composition (nothing to reposition yet).
+    var sortScrolledOnce by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(state.sortMode) {
-        songListState.scrollToItem(0)
+        if (!sortScrolledOnce) {
+            sortScrolledOnce = true
+            return@LaunchedEffect
+        }
+        if (state.songs.isNotEmpty()) {
+            songListState.scrollToItem(0)
+        }
     }
 
     // Batched rendering: with hundreds of songs only the first window is
     // composed up front; scrolling near the end grows the window. Any
-    // filter/sort/search change restarts from the first window.
-    var visibleLimit by remember { mutableIntStateOf(LIBRARY_PAGE_SIZE) }
+    // filter/sort/search change restarts from the first window. Saveable so
+    // rotation doesn't collapse a long list back to 20 rows.
+    var visibleLimit by rememberSaveable { mutableIntStateOf(LIBRARY_PAGE_SIZE) }
     LaunchedEffect(
         state.searchQuery,
         state.selectedTagNames,
@@ -180,43 +204,25 @@ fun LibraryScreen(
                 .padding(innerPadding)
         ) {
             AuraTopBar(
-                title = "AURA Music",
-                subtitle = if (state.songs.isEmpty()) "Vault" else "${state.songs.size} tracks",
+                title = "Your Music Library",
+                subtitle = "${state.songs.size} downloaded • ${savedTracks.size} saved",
                 actions = {
-                    if (state.songs.isNotEmpty()) {
-                        IconButton(
-                            onClick = {
-                                val songs = state.songs.map { it.song }
-                                if (songs.isNotEmpty()) {
-                                    val shuffled = songs.shuffled()
-                                    // Shuffle play: reuse playSong path via first item
-                                    val first = state.songs.firstOrNull { it.song.id == shuffled.first().id }
-                                        ?: state.songs.first()
-                                    viewModel.playSong(first)
-                                    onPlaySong()
-                                }
-                            }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Shuffle,
-                                contentDescription = "Shuffle play",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-                    IconButton(onClick = onBackupClick) {
+                    IconButton(onClick = onAddSongClick) {
                         Icon(
-                            imageVector = Icons.Default.ImportExport,
-                            contentDescription = "Backup",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Search music",
+                            tint = MaterialTheme.colorScheme.primary
                         )
                     }
                     Box {
+                        // The sort menu follows the active tab: Downloaded
+                        // order vs Saved order are stored separately.
+                        val activeSort = if (tab == 0) state.sortMode else savedSort
                         IconButton(onClick = { sortMenuOpen = true }) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.Sort,
-                                contentDescription = "Sort: ${state.sortMode.label}",
-                                tint = if (state.sortMode == LibrarySortMode.RECENT) {
+                                contentDescription = "Sort: ${activeSort.label}",
+                                tint = if (activeSort == LibrarySortMode.RECENT) {
                                     MaterialTheme.colorScheme.onSurfaceVariant
                                 } else {
                                     MaterialTheme.colorScheme.primary
@@ -231,10 +237,11 @@ fun LibraryScreen(
                                 DropdownMenuItem(
                                     text = { Text(mode.label) },
                                     onClick = {
-                                        viewModel.setSortMode(mode)
+                                        if (tab == 0) viewModel.setSortMode(mode)
+                                        else viewModel.setSavedSortMode(mode)
                                         sortMenuOpen = false
                                     },
-                                    leadingIcon = if (mode == state.sortMode) {
+                                    leadingIcon = if (mode == activeSort) {
                                         {
                                             Icon(
                                                 imageVector = Icons.Default.Check,
@@ -247,14 +254,16 @@ fun LibraryScreen(
                             }
                         }
                     }
-                    IconButton(onClick = onGuideClick) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.HelpOutline,
-                            contentDescription = "Getting started",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
                 }
+            )
+
+            Spacer(modifier = Modifier.height(AuraSpacing.Sm))
+
+            LibraryTabs(
+                tab = tab,
+                onTabChange = { tab = it },
+                downloadedCount = state.songs.size,
+                savedCount = savedTracks.size
             )
 
             Spacer(modifier = Modifier.height(AuraSpacing.Sm))
@@ -262,12 +271,46 @@ fun LibraryScreen(
             AuraSearchField(
                 value = state.searchQuery,
                 onValueChange = viewModel::setSearchQuery,
-                placeholder = "Search songs",
+                placeholder = if (tab == 0) "Search downloads" else "Search saved",
                 modifier = Modifier.padding(horizontal = AuraSpacing.Md)
             )
 
             Spacer(modifier = Modifier.height(AuraSpacing.Sm))
 
+            if (tab == 1) {
+                val savedSorted = remember(savedTracks, savedSort) {
+                    viewModel.sortSaved(savedTracks, savedSort)
+                }
+                SavedTab(
+                    savedTracks = savedSorted,
+                    isLoading = savedLoading,
+                    searchQuery = state.searchQuery,
+                    allTags = state.tags,
+    filter = savedFilter,
+    sortMode = savedSort,
+    onToggleInclude = viewModel::toggleSavedTag,
+                    onToggleExclude = viewModel::toggleSavedExcludedTag,
+                    onSetMatchAll = viewModel::setSavedMatchAll,
+                    onClearFilters = viewModel::clearSavedFilters,
+                    downloadedUrls = remember(state.songs) {
+                        state.songs.map { it.song.sourceUrl }.toSet()
+                    },
+                    resolvingUrl = savedResolvingUrl,
+                    onPlay = { track, all ->
+                        viewModel.playSaved(track, all) { onPlaySong() }
+                    },
+                    onPlayNext = viewModel::playNextSaved,
+                    onQueue = viewModel::queueSaved,
+                    onPrefetch = viewModel::prefetchSaved,
+                    onDownload = viewModel::downloadSaved,
+                    onUnsave = viewModel::unsaveTrack,
+                    onToggleTag = viewModel::toggleSavedTagAssignment,
+                    onCreateTag = viewModel::createAndAssignSavedTag,
+                    onClearSearch = { viewModel.setSearchQuery("") },
+                    onDiscover = onDiscoverClick ?: onAddSongClick,
+                    modifier = Modifier.weight(1f)
+                )
+            } else {
             if (state.tags.isNotEmpty()) {
                 FilterSection(
                     tags = state.tags,
@@ -308,32 +351,38 @@ fun LibraryScreen(
             val hasFilters = state.searchQuery.isNotBlank() ||
                 state.selectedTagNames.isNotEmpty() || state.excludedTagNames.isNotEmpty()
             if (state.songs.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (hasFilters) {
-                        AuraEmptyState(
-                            icon = Icons.Default.Search,
-                            title = "No matches",
-                            subtitle = "Try a different search or tags",
-                            actionLabel = "Clear",
-                            onAction = {
-                                viewModel.setSearchQuery("")
-                                viewModel.clearSelectedTags()
-                                viewModel.clearExcludedTags()
-                            }
-                        )
-                    } else {
-                        AuraEmptyState(
-                            icon = Icons.Default.LibraryMusic,
-                            title = "Vault empty",
-                            subtitle = "Add your first track",
-                            actionLabel = "Download",
-                            onAction = onAddSongClick
-                        )
+                if (state.isLoading && !hasFilters) {
+                    // First DB emission hasn't landed yet — skeleton, never a
+                    // fake "Vault empty" flash on cold start.
+                    ShimmerList(rows = 6)
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (hasFilters) {
+                            AuraEmptyState(
+                                icon = Icons.Default.Search,
+                                title = "No matches",
+                                subtitle = "Try a different search or tags",
+                                actionLabel = "Clear",
+                                onAction = {
+                                    viewModel.setSearchQuery("")
+                                    viewModel.clearSelectedTags()
+                                    viewModel.clearExcludedTags()
+                                }
+                            )
+                        } else {
+                            AuraEmptyState(
+                                icon = Icons.Default.LibraryMusic,
+                                title = "Vault empty",
+                                subtitle = "Add your first track",
+                                actionLabel = "Download",
+                                onAction = onAddSongClick
+                            )
+                        }
                     }
                 }
             } else {
@@ -362,16 +411,11 @@ fun LibraryScreen(
                                 false
                             }
                         )
-                        // Distance-based hint: track the row's real on-screen
-                        // shift (window bounds catch the swipe transform;
-                        // layout position does not). Shows past ~64dp of
-                        // drag, hides the instant it slides back under it.
-                        var baseX by remember { mutableFloatStateOf(Float.NaN) }
-                        var dragPx by remember { mutableFloatStateOf(0f) }
-                        val hintThresholdPx = with(LocalDensity.current) { 64.dp.toPx() }
-                        val showHint by remember {
-                            derivedStateOf { dragPx > hintThresholdPx }
-                        }
+                        // Cheap mid-drag hint: driven by the swipe state, not
+                        // per-frame coordinate tracking, so scrolling a large
+                        // vault stays at 60fps.
+                        val showHint = swipeState.dismissDirection !=
+                            SwipeToDismissBoxValue.Settled
                         SwipeToDismissBox(
                             state = swipeState,
                             enableDismissFromStartToEnd = true,
@@ -386,32 +430,7 @@ fun LibraryScreen(
                                 ) {
                                     // Swipe intent: icon + label so it's clear
                                     // the song lands in the queue.
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .padding(horizontal = AuraSpacing.Sm, vertical = AuraSpacing.Xxs)
-                                            .clip(RoundedCornerShape(AuraRadius.Md))
-                                            .background(
-                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                                            )
-                                            .padding(horizontal = AuraSpacing.Lg),
-                                        contentAlignment = Alignment.CenterStart
-                                    ) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(
-                                                imageVector = Icons.Default.QueueMusic,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.primary,
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(AuraSpacing.Xs))
-                                            Text(
-                                                text = "Queue",
-                                                style = MaterialTheme.typography.labelLarge,
-                                                color = MaterialTheme.colorScheme.primary
-                                            )
-                                        }
-                                    }
+                                    QueueSwipeHint()
                                 }
                             },
                             content = {
@@ -431,13 +450,6 @@ fun LibraryScreen(
                                             songWithTags.song.id,
                                             songWithTags.song.title
                                         )
-                                    },
-                                    modifier = Modifier.onGloballyPositioned { coords ->
-                                        val x = coords.boundsInWindow().left
-                                        if (baseX.isNaN() || swipeState.dismissDirection == SwipeToDismissBoxValue.Settled) {
-                                            baseX = x
-                                        }
-                                        dragPx = x - baseX
                                     }
                                 )
                             }
@@ -472,9 +484,503 @@ fun LibraryScreen(
                 }
                 }
             }
+            } // end Downloaded tab
         }
         }
     }
+}
+
+/**
+ * Downloaded / Saved tab switch. Downloaded = offline vault, Saved =
+ * streaming bookmarks that need internet and start near-instantly.
+ */
+@Composable
+private fun LibraryTabs(
+    tab: Int,
+    onTabChange: (Int) -> Unit,
+    downloadedCount: Int,
+    savedCount: Int
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = AuraSpacing.Md),
+        horizontalArrangement = Arrangement.spacedBy(AuraSpacing.Xs)
+    ) {
+        FilterChip(
+            selected = tab == 0,
+            onClick = { onTabChange(0) },
+            label = { Text("Downloaded • $downloadedCount") },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.CloudDownload,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+            },
+            modifier = Modifier.weight(1f)
+        )
+        FilterChip(
+            selected = tab == 1,
+            onClick = { onTabChange(1) },
+            label = { Text("Saved • $savedCount") },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.Bookmark,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+            },
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+/**
+ * Saved tab: streaming bookmarks with the same tag filtering and the same
+ * glass-row look as Downloaded. Each row plays near-instantly (pre-warmed
+ * stream URLs + ExoPlayer disk cache) but needs internet.
+ */
+@Composable
+private fun SavedTab(
+    savedTracks: List<com.aura.music.data.db.SavedTrackWithTags>,
+    isLoading: Boolean,
+    searchQuery: String,
+    allTags: List<com.aura.music.data.db.TagEntity>,
+    filter: SavedFilterUiState,
+    sortMode: LibrarySortMode,
+    onToggleInclude: (String) -> Unit,
+    onToggleExclude: (String) -> Unit,
+    onSetMatchAll: (Boolean) -> Unit,
+    onClearFilters: () -> Unit,
+    downloadedUrls: Set<String>,
+    resolvingUrl: String?,
+    onPlay: (com.aura.music.data.db.SavedTrackEntity, List<com.aura.music.data.db.SavedTrackEntity>) -> Unit,
+    onPlayNext: (com.aura.music.data.db.SavedTrackEntity) -> Unit,
+    onQueue: (com.aura.music.data.db.SavedTrackEntity) -> Unit,
+    onPrefetch: (List<String>) -> Unit,
+    onDownload: (com.aura.music.data.db.SavedTrackEntity) -> Unit,
+    onUnsave: (com.aura.music.data.db.SavedTrackEntity) -> Unit,
+    onToggleTag: (com.aura.music.data.db.SavedTrackWithTags, com.aura.music.data.db.TagEntity) -> Unit,
+    onCreateTag: (com.aura.music.data.db.SavedTrackWithTags, String) -> Unit,
+    onClearSearch: () -> Unit,
+    onDiscover: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val query = searchQuery.trim()
+    val filtered = remember(savedTracks, query, filter) {
+        savedTracks.filter { item ->
+            matchesLibraryFilters(
+                title = item.track.title,
+                artist = item.track.artist,
+                tagNames = item.tags.map { it.name }.toSet(),
+                query = query,
+                selected = filter.selectedTagNames,
+                excluded = filter.excludedTagNames,
+                matchAll = filter.matchAll
+            )
+        }
+    }
+    val filteredEntities = remember(filtered) { filtered.map { it.track } }
+
+    LaunchedEffect(savedTracks.size) {
+        if (savedTracks.isNotEmpty()) onPrefetch(savedTracks.map { it.track.url })
+    }
+
+    // Picker holds only the track id (saveable) — the item itself is looked
+    // up fresh so rotation keeps the dialog with live tag state.
+    var tagPickerId by rememberSaveable { mutableStateOf<Long?>(null) }
+
+    Column(
+        modifier = modifier.fillMaxWidth()
+    ) {
+        if (allTags.isNotEmpty()) {
+            FilterSection(
+                tags = allTags,
+                selected = filter.selectedTagNames,
+                excluded = filter.excludedTagNames,
+                matchAll = filter.matchAll,
+                onToggleInclude = onToggleInclude,
+                onToggleExclude = onToggleExclude,
+                onSetMatchAll = onSetMatchAll,
+                onClearAll = onClearFilters
+            )
+            Spacer(modifier = Modifier.height(AuraSpacing.Xxs))
+        }
+        Text(
+            text = "Streams instantly • needs internet — offline tracks live under Downloaded.",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = AuraSpacing.Lg, vertical = AuraSpacing.Xs)
+        )
+        if (filtered.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                contentAlignment = Alignment.Center
+            ) {
+                if (isLoading && savedTracks.isEmpty() && query.isBlank() &&
+                    filter.selectedTagNames.isEmpty() && filter.excludedTagNames.isEmpty()
+                ) {
+                    ShimmerList(rows = 6)
+                } else if (savedTracks.isEmpty()) {
+                    AuraEmptyState(
+                        icon = Icons.Default.BookmarkBorder,
+                        title = "No saved tracks",
+                        subtitle = "Save from Search — no download needed",
+                        actionLabel = "Search",
+                        onAction = onDiscover
+                    )
+                } else {
+                    AuraEmptyState(
+                        icon = Icons.Default.Search,
+                        title = "No matches",
+                        subtitle = "Try a different search or tags",
+                        actionLabel = "Clear",
+                        onAction = {
+                            onClearSearch()
+                            onClearFilters()
+                        }
+                    )
+                }
+            }
+        } else {
+            val listState = rememberLazyListState()
+            LaunchedEffect(sortMode) {
+                if (filtered.isNotEmpty()) {
+                    try {
+                        listState.scrollToItem(0)
+                    } catch (_: Exception) {
+                    }
+                }
+            }
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(top = AuraSpacing.Xs, bottom = AuraSpacing.BottomListPadding)
+            ) {
+                items(
+                    items = filtered,
+                    key = { it.track.id },
+                    contentType = { "saved" }
+                ) { item ->
+                    // Same swipe-right-to-queue as Downloaded.
+                    val swipeState = rememberSwipeToDismissBoxState(
+                        confirmValueChange = { target ->
+                            if (target == SwipeToDismissBoxValue.StartToEnd) {
+                                onQueue(item.track)
+                            }
+                            false
+                        }
+                    )
+                    val showHint = swipeState.dismissDirection !=
+                        SwipeToDismissBoxValue.Settled
+                    SwipeToDismissBox(
+                        state = swipeState,
+                        enableDismissFromStartToEnd = true,
+                        enableDismissFromEndToStart = false,
+                        backgroundContent = {
+                            AnimatedVisibility(
+                                visible = showHint,
+                                enter = fadeIn(),
+                                exit = fadeOut(animationSpec = tween(100))
+                            ) {
+                                QueueSwipeHint()
+                            }
+                        },
+                        content = {
+                            SavedTrackRow(
+                                item = item,
+                                isResolving = resolvingUrl == item.track.url,
+                                isDownloaded = item.track.url in downloadedUrls,
+                                onPlay = { onPlay(item.track, filteredEntities) },
+                                onPlayNext = { onPlayNext(item.track) },
+                                onQueue = { onQueue(item.track) },
+                                onDownload = { onDownload(item.track) },
+                                onTags = { tagPickerId = item.track.id },
+                                onUnsave = { onUnsave(item.track) }
+                            )
+                        }
+                    )
+                }
+            }
+        }
+    }
+
+    val pickerItem = savedTracks.firstOrNull { it.track.id == tagPickerId }
+    if (pickerItem != null) {
+        SavedTagPickerDialog(
+            item = pickerItem,
+            allTags = allTags,
+            onToggle = { tag -> onToggleTag(pickerItem, tag) },
+            onCreate = { name -> onCreateTag(pickerItem, name) },
+            onDismiss = { tagPickerId = null }
+        )
+    }
+}
+
+/** Mid-swipe hint: icon + label so it's clear the song lands in the queue. */
+@Composable
+private fun QueueSwipeHint() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = AuraSpacing.Sm, vertical = AuraSpacing.Xxs)
+            .clip(RoundedCornerShape(AuraRadius.Md))
+            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+            .padding(horizontal = AuraSpacing.Lg),
+        contentAlignment = Alignment.CenterStart
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Default.QueueMusic,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(AuraSpacing.Xs))
+            Text(
+                text = "Queue",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+    }
+}
+
+/**
+ * Same glass-row language as [SongRow] (both sit on [MediaRowShell]): art,
+ * title, tags, duration and a 3-dot menu — so Downloaded and Saved read as
+ * one list, not two designs.
+ */
+@Composable
+private fun SavedTrackRow(
+    item: com.aura.music.data.db.SavedTrackWithTags,
+    isResolving: Boolean,
+    isDownloaded: Boolean,
+    onPlay: () -> Unit,
+    onPlayNext: () -> Unit,
+    onQueue: () -> Unit,
+    onDownload: () -> Unit,
+    onTags: () -> Unit,
+    onUnsave: () -> Unit
+) {
+    val track = item.track
+    var menuExpanded by remember { mutableStateOf(false) }
+    var confirmUnsave by rememberSaveable { mutableStateOf(false) }
+
+    MediaRowShell(
+        title = track.title,
+        subtitle = listOfNotNull(
+            track.artist?.ifBlank { null },
+            if (isDownloaded) "Downloaded" else "Online only"
+        ).joinToString(" • ").ifEmpty { "YouTube" },
+        subtitleColor = if (isDownloaded) MaterialTheme.colorScheme.primary
+        else MaterialTheme.colorScheme.onSurfaceVariant,
+        thumbnailPath = track.thumbnailUrl,
+        durationMs = track.durationMs,
+        onClick = onPlay,
+        tags = item.tags
+    ) {
+        if (isResolving) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(24.dp),
+                strokeWidth = 2.dp,
+                color = MaterialTheme.colorScheme.primary
+            )
+        } else {
+            Box {
+                IconButton(onClick = { menuExpanded = true }) {
+                    Icon(
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = "Saved options",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                DropdownMenu(
+                    expanded = menuExpanded,
+                    onDismissRequest = { menuExpanded = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Play") },
+                        leadingIcon = {
+                            Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null)
+                        },
+                        onClick = {
+                            menuExpanded = false
+                            onPlay()
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Play next") },
+                        leadingIcon = {
+                            Icon(imageVector = Icons.Default.QueueMusic, contentDescription = null)
+                        },
+                        onClick = {
+                            menuExpanded = false
+                            onPlayNext()
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Add to queue") },
+                        leadingIcon = {
+                            Icon(imageVector = Icons.Default.PlaylistAdd, contentDescription = null)
+                        },
+                        onClick = {
+                            menuExpanded = false
+                            onQueue()
+                        }
+                    )
+                    if (!isDownloaded) {
+                        DropdownMenuItem(
+                            text = { Text("Download offline") },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.CloudDownload,
+                                    contentDescription = null
+                                )
+                            },
+                            onClick = {
+                                menuExpanded = false
+                                onDownload()
+                            }
+                        )
+                    }
+                    DropdownMenuItem(
+                        text = { Text("Tags…") },
+                        leadingIcon = {
+                            Icon(imageVector = Icons.Default.Tag, contentDescription = null)
+                        },
+                        onClick = {
+                            menuExpanded = false
+                            onTags()
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Remove from Saved") },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        },
+                        onClick = {
+                            menuExpanded = false
+                            confirmUnsave = true
+                        }
+                    )
+                }
+            }
+        }
+    }
+
+    if (confirmUnsave) {
+        AlertDialog(
+            onDismissRequest = { confirmUnsave = false },
+            title = { Text("Remove?") },
+            text = {
+                Text("“${track.title}” will be removed from Saved (downloads stay).")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        confirmUnsave = false
+                        onUnsave()
+                    }
+                ) {
+                    Text("Remove", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmUnsave = false }) {
+                    Text("Keep")
+                }
+            }
+        )
+    }
+}
+
+/** Tag assignment for a Saved bookmark: toggle existing or create new. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun SavedTagPickerDialog(
+    item: com.aura.music.data.db.SavedTrackWithTags,
+    allTags: List<com.aura.music.data.db.TagEntity>,
+    onToggle: (com.aura.music.data.db.TagEntity) -> Unit,
+    onCreate: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var newTag by rememberSaveable { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Tags", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 320.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(AuraSpacing.Xs)
+            ) {
+                Text(
+                    text = item.track.title,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (allTags.isEmpty()) {
+                    Text(
+                        text = "No tags yet — create the first one below.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(AuraSpacing.Xs),
+                        verticalArrangement = Arrangement.spacedBy(AuraSpacing.Xs)
+                    ) {
+                        allTags.forEach { tag ->
+                            TagChip(
+                                name = tag.name,
+                                colorHex = tag.colorHex,
+                                selected = item.tags.any { it.id == tag.id },
+                                onClick = { onToggle(tag) }
+                            )
+                        }
+                    }
+                }
+                OutlinedTextField(
+                    value = newTag,
+                    onValueChange = { newTag = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("New tag…") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(AuraRadius.Md)
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    if (newTag.isNotBlank()) {
+                        onCreate(newTag)
+                        newTag = ""
+                    } else {
+                        onDismiss()
+                    }
+                }
+            ) {
+                Text(if (newTag.isNotBlank()) "Add" else "Done")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Close") }
+        }
+    )
 }
 
 /**
@@ -776,26 +1282,13 @@ private fun DownloadsSection(
     }
 }
 
-private fun downloadStageLabel(stage: String): String = when (stage) {
-    "resolving" -> "Reading…"
-    "downloading" -> "Downloading…"
-    "saving" -> "Saving…"
-    else -> "Working…"
-}
-
-private fun downloadDetail(download: ActiveDownload): String {
-    val mb = if (download.bytesDone != null && download.bytesTotal != null && download.bytesTotal > 0) {
-        val done = download.bytesDone / 1_048_576.0
-        val total = download.bytesTotal / 1_048_576.0
-        "%.1f / %.1f MB".format(done, total)
-    } else if (download.bytesDone != null && download.bytesDone > 0) {
-        "%.1f MB".format(download.bytesDone / 1_048_576.0)
-    } else {
-        null
-    }
-    return listOfNotNull("${download.percent}%", downloadStageLabel(download.stage), mb)
-        .joinToString(" • ")
-}
+private fun downloadDetail(download: ActiveDownload): String =
+    downloadBytesDetail(
+        percent = download.percent,
+        bytesDone = download.bytesDone,
+        bytesTotal = download.bytesTotal,
+        stageLabel = downloadStageLabel(download.stage)
+    )
 
 /**
  * Compact tag filtering: a single bar that expands only when needed.
@@ -913,7 +1406,7 @@ private fun FilterSection(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(AuraSpacing.Xs)
                 ) {
-                    items(tags) { tag ->
+                    items(tags, key = { it.id }) { tag ->
                         TagChip(
                             name = tag.name,
                             colorHex = tag.colorHex,
@@ -937,7 +1430,7 @@ private fun FilterSection(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(AuraSpacing.Xs)
                 ) {
-                    items(tags) { tag ->
+                    items(tags, key = { it.id }) { tag ->
                         TagChip(
                             name = tag.name,
                             colorHex = tag.colorHex,

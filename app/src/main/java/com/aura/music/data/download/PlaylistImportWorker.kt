@@ -1,10 +1,18 @@
 package com.aura.music.data.download
 
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.Context
+import android.content.pm.ServiceInfo
+import android.os.Build
+import androidx.core.app.NotificationCompat
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
+import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
+import com.aura.music.R
 import com.aura.music.data.db.SongDao
 import com.aura.music.domain.repository.ExtractionRepository
 import com.aura.music.domain.repository.TagRepository
@@ -65,6 +73,14 @@ class PlaylistImportWorker @AssistedInject constructor(
             }
         }
 
+        // Promote to a foreground service: a 50-track import outlives the
+        // background execution window, and without this the OS can stop it
+        // mid-list. Combined with per-song idempotent skips, an import now
+        // survives app closure and resumes instead of restarting.
+        // Foreground promotion can be rejected (background start limits);
+        // importing without it beats failing the whole playlist.
+        runCatching { setForeground(foregroundInfo(playlist.title.ifBlank { "Importing playlist…" })) }
+
         val urls = playlist.videoUrls
         var imported = 0
         var skippedDuplicate = 0
@@ -82,7 +98,8 @@ class PlaylistImportWorker @AssistedInject constructor(
             try {
                 val existing = try {
                     songDao.getBySourceUrl(videoUrl)
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    android.util.Log.w("PlaylistImportWorker", "Duplicate check failed", e)
                     null
                 }
                 if (existing != null) {
@@ -149,6 +166,38 @@ class PlaylistImportWorker @AssistedInject constructor(
         )
     }
 
+    override suspend fun getForegroundInfo(): ForegroundInfo =
+        foregroundInfo("Importing playlist…")
+
+    private fun foregroundInfo(title: String): ForegroundInfo {
+        val ctx = applicationContext
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val manager = ctx.getSystemService(NotificationManager::class.java)
+            manager.createNotificationChannel(
+                NotificationChannel(
+                    CHANNEL_ID,
+                    "Downloads",
+                    NotificationManager.IMPORTANCE_LOW
+                )
+            )
+        }
+        val notification: Notification = NotificationCompat.Builder(ctx, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle(title)
+            .setContentText("Saving songs — safe to leave the app.")
+            .setOngoing(true)
+            .build()
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            ForegroundInfo(
+                NOTIFICATION_ID,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+            )
+        } else {
+            ForegroundInfo(NOTIFICATION_ID, notification)
+        }
+    }
+
     companion object {
         const val KEY_URL = "playlist_url"
         const val KEY_TAG = "playlist_tag"
@@ -169,5 +218,7 @@ class PlaylistImportWorker @AssistedInject constructor(
         const val PLAYLIST_TAG = "playlist-import"
 
         private const val MAX_ERRORS = 8
+        private const val CHANNEL_ID = "aura_downloads"
+        private const val NOTIFICATION_ID = 41
     }
 }

@@ -68,6 +68,7 @@ class SongFileDownloader @Inject constructor(
         onEvent: suspend (Event) -> Unit = {}
     ): Long {
         var destinationFile: File? = null
+        var partFile: File? = null
         try {
             val streamInfo = extractionRepository.resolveStreamInfo(canonicalUrl)
             onEvent(Event.Resolved(streamInfo.title))
@@ -84,21 +85,33 @@ class SongFileDownloader @Inject constructor(
                 else -> "m4a"
             }
 
+            // Unicode-safe: keep letters/numbers across scripts (Hindi,
+            // Tamil, CJK…) — the old ASCII-only class emptied non-Latin
+            // titles and collapsed every such download to "audio_<rand>".
             val safeTitle = streamInfo.title
                 .take(60)
-                .replace(Regex("[^a-zA-Z0-9 _-]"), "")
+                .replace(Regex("[^\\p{L}\\p{N} _-]"), "")
                 .trim()
                 .replace(Regex("\\s+"), "_")
                 .takeIf { it.isNotEmpty() } ?: "audio"
             val fileName = "${safeTitle}_${UUID.randomUUID().toString().take(8)}.$extension"
             destinationFile = File(songsDir, fileName)
+            // Write to a .part sibling and rename: a process-death mid-write
+            // then leaves an unreferenced .part behind instead of a corrupt
+            // "finished-looking" file in the vault.
+            partFile = File(songsDir, "$fileName.part")
 
-            downloadBytes(streamInfo.bestAudioStreamUrl, destinationFile, isStopped) { percent, done, total ->
+            downloadBytes(streamInfo.bestAudioStreamUrl, partFile, isStopped) { percent, done, total ->
                 onEvent(Event.Progress(percent, done, total))
             }
 
-            val fileLen = destinationFile.length()
+            val fileLen = partFile.length()
             require(fileLen > 1_000L) { "Downloaded file is empty — the stream expired. Please retry." }
+            if (!partFile.renameTo(destinationFile)) {
+                // Rare (same volume should always rename) — fall back to copy.
+                partFile.copyTo(destinationFile, overwrite = true)
+                partFile.delete()
+            }
 
             val thumbnailPath = fetchThumbnail(streamInfo.thumbnailUrl)
 
@@ -119,9 +132,14 @@ class SongFileDownloader @Inject constructor(
             val insertedId = songDao.insertSong(songEntity)
             // IGNORE returns -1 when a concurrent download won the race on
             // the same URL — resolve to the existing row, still a success.
+            // Our just-written file becomes an orphan; delete it.
             val songId = if (insertedId > 0) {
                 insertedId
             } else {
+                try {
+                    destinationFile?.takeIf { it.exists() }?.delete()
+                } catch (_: Exception) {
+                }
                 songDao.getBySourceUrl(canonicalUrl)?.id ?: -1L
             }
             require(songId > 0) { "Download finished without a song." }
@@ -129,12 +147,14 @@ class SongFileDownloader @Inject constructor(
         } catch (e: CancellationException) {
             try {
                 destinationFile?.takeIf { it.exists() }?.delete()
+                partFile?.takeIf { it.exists() }?.delete()
             } catch (_: Exception) { }
             throw e
         } catch (e: Exception) {
             // Never leave a partial file behind.
             try {
                 destinationFile?.takeIf { it.exists() }?.delete()
+                partFile?.takeIf { it.exists() }?.delete()
             } catch (_: Exception) { }
             throw e
         }

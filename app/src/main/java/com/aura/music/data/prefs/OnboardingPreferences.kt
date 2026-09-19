@@ -34,10 +34,4 @@ class OnboardingPreferences @Inject constructor(
             prefs[completedKey] = completed
         }
     }
-
-    suspend fun resetForDebug() {
-        context.onboardingDataStore.edit { prefs ->
-            prefs.remove(completedKey)
-        }
-    }
 }

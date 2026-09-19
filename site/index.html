@@ -1,0 +1,891 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#f3f1eb">
+  <meta name="description" content="Aura is a private, on-device music player for Android—an offline library built around your music.">
+  <title>Aura — Your music, kept by you</title>
+
+  <style>
+    :root {
+      --paper:#f3f1eb;
+      --ink:#151515;
+      --muted:#68665f;
+      --line:rgba(21,21,21,.14);
+      --dark:#11110f;
+      --accent:#d95f3d;
+      --nav-h:72px;
+      --ease:cubic-bezier(.22,.61,.36,1);
+    }
+
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth;background:var(--paper)}
+    body{
+      margin:0;
+      color:var(--ink);
+      background:var(--paper);
+      font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      -webkit-font-smoothing:antialiased;
+      overflow-x:hidden
+    }
+    body.menu-open{overflow:hidden}
+    img{display:block;max-width:100%}
+    a{color:inherit}
+    button{font:inherit}
+    button,a{-webkit-tap-highlight-color:transparent}
+
+    .skip{
+      position:fixed;z-index:1000;top:10px;left:10px;
+      padding:10px 14px;background:#fff;border-radius:999px;
+      transform:translateY(-160%)
+    }
+    .skip:focus{transform:none}
+
+    .nav{
+      position:fixed;z-index:100;inset:0 0 auto;height:var(--nav-h);
+      display:flex;align-items:center;justify-content:space-between;
+      padding:0 clamp(20px,4vw,64px);
+      border-bottom:1px solid transparent;
+      transition:background .35s,border-color .35s
+    }
+    .nav.is-solid{
+      background:rgba(243,241,235,.88);
+      border-color:var(--line);
+      backdrop-filter:blur(18px);
+      -webkit-backdrop-filter:blur(18px)
+    }
+
+    .brand{
+      display:inline-flex;align-items:center;gap:10px;
+      text-decoration:none;font-size:18px;font-weight:760;
+      letter-spacing:-.04em
+    }
+    .brand-mark{
+      width:23px;height:23px;border:1.5px solid currentColor;
+      border-radius:50%;display:grid;place-items:center
+    }
+    .brand-mark::after{
+      content:"";width:7px;height:7px;background:currentColor;border-radius:50%
+    }
+
+    .desktop-nav{display:flex;align-items:center;gap:30px}
+    .desktop-nav a,.mobile-panel a{
+      text-decoration:none;font-size:14px;font-weight:650
+    }
+    .desktop-nav a:not(.button-link){color:var(--muted)}
+
+    .button-link,.button{
+      display:inline-flex;align-items:center;justify-content:center;gap:9px;
+      min-height:46px;padding:0 20px;border-radius:999px;
+      text-decoration:none;font-size:14px;font-weight:720;
+      border:1px solid var(--ink);
+      transition:transform .25s var(--ease),background .25s,color .25s
+    }
+    .button-link{
+      min-height:38px;padding:0 17px;background:var(--ink);color:#fff
+    }
+    .button:hover,.button-link:hover{transform:translateY(-2px)}
+    .button.dark{background:var(--ink);color:#fff}
+    .button.light{border-color:rgba(255,255,255,.35);background:#fff;color:#111}
+    .button.ghost{background:transparent}
+
+    .menu-button{
+      display:none;width:44px;height:44px;padding:0;border:0;
+      background:transparent;place-items:center;cursor:pointer
+    }
+    .menu-button span,.menu-button::before,.menu-button::after{
+      content:"";display:block;width:22px;height:1.5px;background:currentColor;
+      transition:transform .25s,opacity .2s
+    }
+    .menu-button span{margin:5px 0}
+    .menu-button[aria-expanded="true"] span{opacity:0}
+    .menu-button[aria-expanded="true"]::before{transform:translateY(6.5px) rotate(45deg)}
+    .menu-button[aria-expanded="true"]::after{transform:translateY(-6.5px) rotate(-45deg)}
+
+    .mobile-panel{
+      position:fixed;z-index:90;inset:var(--nav-h) 0 0;
+      background:var(--paper);display:flex;flex-direction:column;
+      padding:38px 24px 24px;gap:12px;visibility:hidden;opacity:0;
+      transform:translateY(-12px);transition:.25s var(--ease)
+    }
+    .mobile-panel.open{visibility:visible;opacity:1;transform:none}
+    .mobile-panel a{
+      font-size:clamp(28px,9vw,50px);padding:10px 0;
+      border-bottom:1px solid var(--line);letter-spacing:-.04em
+    }
+    .mobile-panel .button{margin-top:auto;font-size:16px;border:0}
+
+    .hero{
+      position:relative;min-height:100svh;
+      padding:calc(var(--nav-h) + 70px) clamp(22px,6vw,100px) 60px;
+      display:grid;place-items:center;overflow:hidden
+    }
+    .hero-grid{
+      width:min(1380px,100%);
+      display:grid;
+      grid-template-columns:minmax(0,1.05fr) minmax(310px,.7fr);
+      align-items:center;gap:5vw
+    }
+    .eyebrow{
+      display:flex;align-items:center;gap:9px;margin:0 0 26px;
+      color:var(--muted);font-size:12px;font-weight:750;
+      text-transform:uppercase;letter-spacing:.16em
+    }
+    .eyebrow::before{
+      content:"";width:7px;height:7px;border-radius:50%;background:var(--accent)
+    }
+    h1,h2,h3,p{margin-top:0}
+    h1{
+      max-width:830px;margin-bottom:28px;
+      font-size:clamp(64px,8.8vw,142px);
+      line-height:.85;letter-spacing:-.075em;font-weight:730
+    }
+    h1 span{display:block;color:var(--accent)}
+    .hero-copy>p:not(.eyebrow){
+      max-width:580px;margin-bottom:33px;color:var(--muted);
+      font-size:clamp(17px,1.45vw,22px);line-height:1.55
+    }
+    .actions{display:flex;gap:12px;flex-wrap:wrap}
+
+    .hero-stage{
+      position:relative;height:min(70vh,720px);min-height:500px;
+      display:grid;place-items:center;perspective:1200px
+    }
+    .hero-orbit{
+      position:absolute;width:min(38vw,510px);aspect-ratio:1;
+      border:1px solid var(--line);border-radius:50%
+    }
+    .hero-orbit::before,.hero-orbit::after{
+      content:"";position:absolute;inset:15%;
+      border:1px solid var(--line);border-radius:50%
+    }
+    .hero-orbit::after{
+      inset:35%;background:var(--accent);border:0;opacity:.08
+    }
+
+    .phone{
+      position:relative;width:clamp(235px,19vw,310px);
+      aspect-ratio:9/19.4;border-radius:clamp(35px,3vw,49px);
+      padding:8px;background:#1c1c1b;
+      box-shadow:0 44px 85px rgba(38,32,24,.25),
+                 inset 0 0 0 1px rgba(255,255,255,.18);
+      transform-style:preserve-3d;overflow:hidden
+    }
+    .phone::before{
+      content:"";position:absolute;z-index:5;top:14px;left:50%;
+      width:31%;height:24px;transform:translateX(-50%);
+      border-radius:15px;background:#111
+    }
+    .phone::after{
+      content:"";position:absolute;z-index:5;right:-3px;top:25%;
+      width:3px;height:18%;border-radius:3px;background:#4c4c49
+    }
+    .screen-stack{
+      position:relative;width:100%;height:100%;overflow:hidden;
+      border-radius:calc(clamp(35px,3vw,49px) - 8px);background:#0d0d0c
+    }
+    .phone-screen{
+      position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
+      opacity:0;transform:scale(1.035);
+      transition:opacity .5s var(--ease),transform .7s var(--ease)
+    }
+    .phone-screen.active{opacity:1;transform:scale(1)}
+    .hero-phone{animation:hero-in 1.45s .15s var(--ease) both}
+
+    @keyframes hero-in{
+      from{
+        opacity:0;
+        transform:translate3d(32vw,25vh,0) rotate(18deg) scale(.66)
+      }
+      to{opacity:1;transform:rotate(-5deg)}
+    }
+
+    .scroll-hint{
+      position:absolute;bottom:28px;left:clamp(22px,6vw,100px);
+      display:flex;align-items:center;gap:10px;color:var(--muted);
+      font-size:12px;text-transform:uppercase;letter-spacing:.13em
+    }
+    .scroll-hint i{
+      width:34px;height:1px;background:currentColor;animation:hint 1.6s infinite
+    }
+    @keyframes hint{
+      50%{transform:scaleX(.45);transform-origin:left}
+    }
+
+    .story{position:relative;height:600vh;background:#11110f;color:#fff}
+    .story-sticky{position:sticky;top:0;height:100svh;overflow:hidden}
+    .story-bg{
+      position:absolute;inset:0;
+      background:radial-gradient(circle at var(--glow-x,50%) 55%,
+      rgba(217,95,61,.12),transparent 34%);
+      opacity:.85
+    }
+    .story-rule{
+      position:absolute;inset:var(--nav-h) clamp(20px,4vw,60px) auto;
+      height:1px;background:rgba(255,255,255,.16)
+    }
+    .chapter-label{
+      position:absolute;top:calc(var(--nav-h) + 25px);
+      left:clamp(22px,5vw,76px);font-size:11px;text-transform:uppercase;
+      letter-spacing:.17em;color:rgba(255,255,255,.55)
+    }
+    .story-phone-wrap{
+      position:absolute;inset:0;display:grid;place-items:center;
+      pointer-events:none;perspective:1600px
+    }
+    .story-phone{
+      width:clamp(230px,22vw,330px);will-change:transform;
+      box-shadow:0 60px 120px rgba(0,0,0,.6),
+                 inset 0 0 0 1px rgba(255,255,255,.18)
+    }
+
+    .chapters{position:absolute;inset:0;pointer-events:none}
+    .chapter{
+      position:absolute;top:50%;width:min(420px,31vw);
+      opacity:0;transform:translateY(calc(-50% + 28px));
+      will-change:opacity,transform
+    }
+    .chapter:nth-child(odd){left:clamp(24px,7vw,110px)}
+    .chapter:nth-child(even){right:clamp(24px,7vw,110px)}
+    .chapter-number{
+      display:block;margin-bottom:18px;color:var(--accent);
+      font-size:12px;font-weight:800;letter-spacing:.18em
+    }
+    .chapter h2{
+      margin-bottom:19px;font-size:clamp(38px,4.4vw,72px);
+      line-height:.95;letter-spacing:-.055em;font-weight:690
+    }
+    .chapter p{
+      max-width:380px;margin:0;color:rgba(255,255,255,.62);
+      font-size:clamp(15px,1.25vw,19px);line-height:1.55
+    }
+
+    .progress-dots{
+      position:absolute;z-index:4;right:clamp(18px,3vw,44px);
+      top:50%;display:grid;gap:10px;transform:translateY(-50%)
+    }
+    .progress-dots i{
+      display:block;width:5px;height:5px;border-radius:50%;
+      background:rgba(255,255,255,.25);transition:.25s
+    }
+    .progress-dots i.active{background:#fff;transform:scale(1.6)}
+
+    .editorial{position:relative;background:var(--paper)}
+    .intro{
+      padding:clamp(100px,15vw,220px) clamp(22px,7vw,110px);
+      display:grid;grid-template-columns:.75fr 1.25fr;gap:8vw;
+      border-bottom:1px solid var(--line)
+    }
+    .section-kicker{
+      font-size:11px;font-weight:800;letter-spacing:.17em;
+      text-transform:uppercase;color:var(--muted)
+    }
+    .display-copy{
+      max-width:950px;margin:0;font-size:clamp(44px,6.6vw,108px);
+      line-height:.96;letter-spacing:-.065em;font-weight:690
+    }
+    .display-copy em{color:var(--accent);font-style:normal}
+
+    .feature-grid{
+      display:grid;grid-template-columns:repeat(12,1fr);gap:18px;
+      padding:18px clamp(18px,4vw,64px) clamp(100px,10vw,160px)
+    }
+    .feature-card{
+      position:relative;min-height:620px;padding:clamp(28px,4vw,56px);
+      border:1px solid var(--line);border-radius:28px;
+      overflow:hidden;background:#e9e5dc
+    }
+    .feature-card:nth-child(1){grid-column:span 7}
+    .feature-card:nth-child(2){grid-column:span 5;background:#d8d1c5}
+    .feature-card:nth-child(3){grid-column:span 5;background:#c9d0c5}
+    .feature-card:nth-child(4){grid-column:span 7;background:#d8cabe}
+    .feature-card h3{
+      max-width:570px;margin-bottom:14px;
+      font-size:clamp(31px,4vw,58px);line-height:1;letter-spacing:-.05em
+    }
+    .feature-card p{
+      max-width:510px;color:#56534d;line-height:1.55;font-size:16px
+    }
+    .card-visual{
+      position:absolute;inset:42% 0 0;display:grid;
+      place-items:end center;overflow:hidden
+    }
+    .card-phone{
+      width:clamp(210px,20vw,310px);transform:translateY(20%);
+      box-shadow:0 38px 70px rgba(36,32,26,.25)
+    }
+    .feature-card:nth-child(even) .card-phone{
+      transform:translateY(24%) rotate(5deg)
+    }
+
+    .privacy{
+      min-height:90svh;padding:clamp(90px,12vw,170px) clamp(22px,7vw,110px);
+      background:#20211e;color:#fff;display:grid;
+      grid-template-columns:1.1fr .9fr;align-items:center;gap:8vw
+    }
+    .privacy h2{
+      max-width:780px;margin-bottom:28px;font-size:clamp(52px,7.8vw,120px);
+      line-height:.9;letter-spacing:-.07em
+    }
+    .privacy h2 span{color:#aab4a7}
+    .privacy p{
+      max-width:520px;color:rgba(255,255,255,.62);
+      font-size:clamp(17px,1.5vw,22px);line-height:1.6
+    }
+    .privacy-list{
+      list-style:none;margin:0;padding:0;
+      border-top:1px solid rgba(255,255,255,.16)
+    }
+    .privacy-list li{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:23px 0;border-bottom:1px solid rgba(255,255,255,.16);
+      font-size:17px
+    }
+    .privacy-list li::after{content:"✓";color:#b8c8b5}
+
+    .closing{
+      min-height:88svh;padding:100px 24px;display:grid;place-items:center;
+      text-align:center;background:var(--accent);color:#160e0a
+    }
+    .closing-inner{max-width:1100px}
+    .closing .brand-mark{margin:0 auto 33px;width:44px;height:44px}
+    .closing .brand-mark::after{width:13px;height:13px}
+    .closing h2{
+      margin-bottom:28px;font-size:clamp(64px,10vw,156px);
+      line-height:.82;letter-spacing:-.075em
+    }
+    .closing p{
+      margin:0 auto 34px;max-width:580px;
+      font-size:clamp(17px,1.5vw,21px);line-height:1.5
+    }
+
+    footer{
+      padding:28px clamp(22px,5vw,76px);display:flex;
+      justify-content:space-between;align-items:center;gap:24px;
+      background:#171715;color:rgba(255,255,255,.6);font-size:13px
+    }
+    footer div{display:flex;gap:22px}
+    footer a{text-decoration:none}
+
+    .reveal{
+      opacity:0;transform:translateY(28px);
+      transition:opacity .8s var(--ease),transform .8s var(--ease)
+    }
+    .reveal.visible{opacity:1;transform:none}
+
+    @media(max-width:900px){
+      .desktop-nav{display:none}
+      .menu-button{display:grid}
+      .hero{padding-top:calc(var(--nav-h) + 50px)}
+      .hero-grid{grid-template-columns:1fr;text-align:center}
+      .hero-copy{display:grid;justify-items:center}
+      .hero-copy>p:not(.eyebrow){max-width:670px}
+      .actions{justify-content:center}
+      .hero-stage{height:54vh;min-height:440px}
+      .hero-orbit{width:min(72vw,460px)}
+      .scroll-hint{display:none}
+      .chapter{width:min(42vw,330px)}
+      .chapter:nth-child(odd){left:24px}
+      .chapter:nth-child(even){right:24px}
+      .chapter h2{font-size:clamp(34px,6vw,52px)}
+      .intro{grid-template-columns:1fr;gap:34px}
+      .feature-card:nth-child(n){grid-column:span 12;min-height:650px}
+      .privacy{grid-template-columns:1fr;gap:60px}
+    }
+
+    @media(max-width:620px){
+      :root{--nav-h:64px}
+      .nav{padding:0 18px}
+      .hero{min-height:100svh;padding:110px 18px 35px}
+      h1{font-size:clamp(58px,18vw,94px)}
+      .hero-stage{min-height:405px;height:48vh}
+      .hero-phone{width:210px}
+      .story{height:530vh}
+      .story-phone-wrap{align-items:start;padding-top:17vh}
+      .story-phone{width:190px}
+      .chapter{
+        top:auto!important;left:22px!important;right:22px!important;
+        bottom:7vh;width:auto;text-align:center;transform:translateY(20px)
+      }
+      .chapter p{margin-inline:auto}
+      .chapter h2{font-size:clamp(35px,11vw,54px)}
+      .chapter-number{margin-bottom:10px}
+      .progress-dots{right:12px}
+      .intro{padding:100px 22px}
+      .feature-grid{padding:12px 12px 90px;gap:12px}
+      .feature-card:nth-child(n){
+        min-height:590px;padding:30px 24px;border-radius:22px
+      }
+      .card-visual{inset:45% 0 0}
+      .card-phone{width:235px}
+      .privacy{padding:100px 24px}
+      .closing{min-height:80svh}
+      footer{align-items:flex-start;flex-direction:column}
+    }
+
+    @media(prefers-reduced-motion:reduce){
+      html{scroll-behavior:auto}
+      *,*::before,*::after{
+        animation-duration:.001ms!important;
+        animation-iteration-count:1!important;
+        transition-duration:.001ms!important
+      }
+      .story{height:auto;padding:90px 22px}
+      .story-sticky{
+        height:auto;overflow:visible;display:grid;gap:55px
+      }
+      .story-phone-wrap{
+        position:relative;height:540px;padding:0;order:1
+      }
+      .chapters{position:relative;display:grid;gap:75px;order:2}
+      .chapter{
+        position:relative!important;inset:auto!important;
+        width:min(620px,100%);margin:auto;text-align:center;
+        opacity:1!important;transform:none!important
+      }
+      .chapter p{margin:auto}
+      .progress-dots,.story-rule,.chapter-label{display:none}
+      .story-phone{transform:none!important}
+      .reveal{opacity:1;transform:none}
+    }
+  </style>
+</head>
+
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="nav" id="siteNav">
+    <a class="brand" href="#top" aria-label="Aura home">
+      <span class="brand-mark" aria-hidden="true"></span>
+      Aura
+    </a>
+
+    <nav class="desktop-nav" aria-label="Primary navigation">
+      <a href="#experience">Experience</a>
+      <a href="#features">Features</a>
+      <a href="#privacy">Privacy</a>
+      <a href="https://github.com/Ai-Chetan/Aura-Music" target="_blank" rel="noopener noreferrer">GitHub</a>
+      <a class="button-link" href="https://github.com/Ai-Chetan/Aura-Music/releases" target="_blank" rel="noopener noreferrer">Get Aura</a>
+    </nav>
+
+    <button class="menu-button" id="menuButton" type="button"
+      aria-label="Open navigation" aria-controls="mobilePanel"
+      aria-expanded="false">
+      <span></span>
+    </button>
+  </header>
+
+  <nav class="mobile-panel" id="mobilePanel" aria-label="Mobile navigation">
+    <a href="#experience">Experience</a>
+    <a href="#features">Features</a>
+    <a href="#privacy">Privacy</a>
+    <a href="https://github.com/Ai-Chetan/Aura-Music" target="_blank" rel="noopener noreferrer">GitHub</a>
+    <a class="button dark" href="https://github.com/Ai-Chetan/Aura-Music/releases" target="_blank" rel="noopener noreferrer">Download Aura</a>
+  </nav>
+
+  <main id="main">
+    <section class="hero" id="top" aria-labelledby="hero-title">
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <p class="eyebrow">Private music for Android</p>
+
+          <h1 id="hero-title">
+            Your music.
+            <span>Kept by you.</span>
+          </h1>
+
+          <p>
+            Aura turns the tracks you love into a thoughtful offline
+            library—organized, beautifully presented, and entirely on your
+            device.
+          </p>
+
+          <p style="opacity:.65;font-size:.9em">
+            Note: the app UI has been refreshed — new screenshots are on the way.
+          </p>
+
+          <div class="actions">
+            <a class="button dark" href="https://github.com/Ai-Chetan/Aura-Music/releases" target="_blank" rel="noopener noreferrer">
+              Download for Android <span aria-hidden="true">↓</span>
+            </a>
+            <a class="button ghost" href="#experience">See the experience</a>
+          </div>
+        </div>
+
+        <div class="hero-stage" aria-label="Aura app shown on a phone">
+          <div class="hero-orbit" aria-hidden="true"></div>
+
+          <div class="phone hero-phone" aria-hidden="true">
+            <div class="screen-stack">
+              <img class="phone-screen active"
+                src="screenshots/library.png"
+                data-fallback="../docs/screenshots/library.png"
+                alt="">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="scroll-hint" aria-hidden="true">
+        <i></i>Scroll to explore
+      </div>
+    </section>
+
+    <section class="story" id="experience" aria-label="Aura product experience">
+      <div class="story-sticky">
+        <div class="story-bg" aria-hidden="true"></div>
+        <div class="story-rule"></div>
+        <div class="chapter-label">The Aura experience</div>
+
+        <div class="story-phone-wrap">
+          <div class="phone story-phone" id="storyPhone" aria-hidden="true">
+            <div class="screen-stack">
+              <img class="phone-screen active" src="screenshots/library.png" data-fallback="../docs/screenshots/library.png" alt="">
+              <img class="phone-screen" src="screenshots/download.png" data-fallback="../docs/screenshots/download.png" alt="">
+              <img class="phone-screen" src="screenshots/now-playing.png" data-fallback="../docs/screenshots/now-playing.png" alt="">
+              <img class="phone-screen" src="screenshots/song-detail.png" data-fallback="../docs/screenshots/song-detail.png" alt="">
+              <img class="phone-screen" src="screenshots/backup.png" data-fallback="../docs/screenshots/backup.png" alt="">
+              <img class="phone-screen" src="screenshots/lock-screen.png" data-fallback="../docs/screenshots/lock-screen.png" alt="">
+            </div>
+          </div>
+        </div>
+
+        <div class="chapters">
+          <article class="chapter">
+            <span class="chapter-number">01 — LIBRARY</span>
+            <h2>Everything you love, in one quiet place.</h2>
+            <p>Browse a clean, tag-powered collection designed to feel personal—not algorithmic.</p>
+          </article>
+
+          <article class="chapter">
+            <span class="chapter-number">02 — SAVE</span>
+            <h2>Paste a link. Keep the music.</h2>
+            <p>Bring music into Aura with a direct, understandable flow and best-available audio.</p>
+          </article>
+
+          <article class="chapter">
+            <span class="chapter-number">03 — LISTEN</span>
+            <h2>A player that gets out of the way.</h2>
+            <p>Artwork, essential controls, and a focused interface make the track the centerpiece.</p>
+          </article>
+
+          <article class="chapter">
+            <span class="chapter-number">04 — DETAILS</span>
+            <h2>Your library, shaped your way.</h2>
+            <p>Edit titles, artwork, artists, and tags so every track belongs exactly where you expect.</p>
+          </article>
+
+          <article class="chapter">
+            <span class="chapter-number">05 — BACKUP</span>
+            <h2>Your collection stays portable.</h2>
+            <p>Back up what matters and restore it when you need it. No account required.</p>
+          </article>
+
+          <article class="chapter">
+            <span class="chapter-number">06 — CONTROLS</span>
+            <h2>Present, even when the app is not.</h2>
+            <p>Full lock-screen controls keep playback close without pulling you away from the moment.</p>
+          </article>
+        </div>
+
+        <div class="progress-dots" aria-hidden="true">
+          <i></i><i></i><i></i><i></i><i></i><i></i>
+        </div>
+      </div>
+    </section>
+
+    <div class="editorial">
+      <section class="intro" aria-labelledby="intro-title">
+        <p class="section-kicker reveal">Designed around ownership</p>
+        <h2 class="display-copy reveal" id="intro-title">
+          A music app that treats your library like a
+          <em>collection</em>, not a feed.
+        </h2>
+      </section>
+
+      <section class="feature-grid" id="features" aria-label="Aura features">
+        <article class="feature-card reveal">
+          <h3>Make the library yours.</h3>
+          <p>Tags and thoughtful metadata tools replace rigid categories, giving every collection its own logic.</p>
+          <div class="card-visual">
+            <div class="phone card-phone" aria-hidden="true">
+              <div class="screen-stack">
+                <img class="phone-screen active" src="screenshots/song-detail.png" data-fallback="../docs/screenshots/song-detail.png" alt="">
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="feature-card reveal">
+          <h3>Save in a few taps.</h3>
+          <p>A focused download flow brings music from a link into your offline library.</p>
+          <div class="card-visual">
+            <div class="phone card-phone" aria-hidden="true">
+              <div class="screen-stack">
+                <img class="phone-screen active" src="screenshots/download.png" data-fallback="../docs/screenshots/download.png" alt="">
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="feature-card reveal">
+          <h3>Ready beyond the app.</h3>
+          <p>Playback controls stay available on the lock screen, right where Android users expect them.</p>
+          <div class="card-visual">
+            <div class="phone card-phone" aria-hidden="true">
+              <div class="screen-stack">
+                <img class="phone-screen active" src="screenshots/lock-screen.png" data-fallback="../docs/screenshots/lock-screen.png" alt="">
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="feature-card reveal">
+          <h3>Back up. Move on. Restore.</h3>
+          <p>Your carefully built collection should never feel trapped. Aura keeps continuity in your hands.</p>
+          <div class="card-visual">
+            <div class="phone card-phone" aria-hidden="true">
+              <div class="screen-stack">
+                <img class="phone-screen active" src="screenshots/backup.png" data-fallback="../docs/screenshots/backup.png" alt="">
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="privacy" id="privacy" aria-labelledby="privacy-title">
+        <div class="reveal">
+          <p class="section-kicker">Private by design</p>
+          <h2 id="privacy-title">No cloud.<br><span>No account.</span></h2>
+          <p>
+            Aura keeps listening personal. Your music, tags, and playback
+            experience live on your Android device—not in somebody else's
+            profile of you.
+          </p>
+        </div>
+
+        <ul class="privacy-list reveal">
+          <li>On-device library</li>
+          <li>No account required</li>
+          <li>No remote music profile</li>
+          <li>Open-source project</li>
+        </ul>
+      </section>
+
+      <section class="closing" aria-labelledby="closing-title">
+        <div class="closing-inner reveal">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <h2 id="closing-title">Take back your music.</h2>
+          <p>Download Aura for Android and build an offline library that belongs to you.</p>
+
+          <div class="actions" style="justify-content:center">
+            <a class="button light" href="https://github.com/Ai-Chetan/Aura-Music/releases" target="_blank" rel="noopener noreferrer">
+              Get Aura <span aria-hidden="true">↓</span>
+            </a>
+            <a class="button ghost" href="https://github.com/Ai-Chetan/Aura-Music" target="_blank" rel="noopener noreferrer">
+              View on GitHub
+            </a>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer>
+    <a class="brand" href="#top">
+      <span class="brand-mark" aria-hidden="true"></span>
+      Aura
+    </a>
+
+    <div>
+      <span>Android music, kept local.</span>
+      <a href="https://github.com/Ai-Chetan/Aura-Music" target="_blank" rel="noopener noreferrer">GitHub</a>
+    </div>
+  </footer>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
+      const clamp = (n, min = 0, max = 1) => Math.min(max, Math.max(min, n));
+      const lerp = (a, b, t) => a + (b - a) * t;
+      const ease = t => 1 - Math.pow(1 - clamp(t), 3);
+
+      document.querySelectorAll("img[data-fallback]").forEach(img => {
+        img.addEventListener("error", () => {
+          const fallback = img.dataset.fallback;
+          if (fallback && !img.src.includes(fallback)) img.src = fallback;
+        }, { once: true });
+      });
+
+      const nav = document.getElementById("siteNav");
+      const menuButton = document.getElementById("menuButton");
+      const mobilePanel = document.getElementById("mobilePanel");
+
+      function closeMenu() {
+        mobilePanel.classList.remove("open");
+        document.body.classList.remove("menu-open");
+        menuButton.setAttribute("aria-expanded", "false");
+        menuButton.setAttribute("aria-label", "Open navigation");
+      }
+
+      menuButton.addEventListener("click", () => {
+        const open = menuButton.getAttribute("aria-expanded") !== "true";
+        menuButton.setAttribute("aria-expanded", String(open));
+        menuButton.setAttribute("aria-label", open ? "Close navigation" : "Open navigation");
+        mobilePanel.classList.toggle("open", open);
+        document.body.classList.toggle("menu-open", open);
+      });
+
+      mobilePanel.querySelectorAll("a").forEach(a => {
+        a.addEventListener("click", closeMenu);
+      });
+
+      addEventListener("keydown", event => {
+        if (event.key === "Escape") closeMenu();
+      });
+
+      const reveals = document.querySelectorAll(".reveal");
+
+      if ("IntersectionObserver" in window && !reduceMotion.matches) {
+        const observer = new IntersectionObserver(entries => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add("visible");
+              observer.unobserve(entry.target);
+            }
+          });
+        }, { threshold: 0.14 });
+
+        reveals.forEach(el => observer.observe(el));
+      } else {
+        reveals.forEach(el => el.classList.add("visible"));
+      }
+
+      const story = document.querySelector(".story");
+      const storyPhone = document.getElementById("storyPhone");
+      const screens = [...storyPhone.querySelectorAll(".phone-screen")];
+      const chapters = [...document.querySelectorAll(".chapter")];
+      const dots = [...document.querySelectorAll(".progress-dots i")];
+      const storyBg = document.querySelector(".story-bg");
+
+      let latestY = scrollY;
+      let ticking = false;
+      let lastIndex = -1;
+
+      function activateScreen(index) {
+        if (index === lastIndex) return;
+
+        lastIndex = index;
+        screens.forEach((screen, i) => screen.classList.toggle("active", i === index));
+        dots.forEach((dot, i) => dot.classList.toggle("active", i === index));
+      }
+
+      function render() {
+        ticking = false;
+        nav.classList.toggle("is-solid", latestY > 20);
+
+        if (reduceMotion.matches) return;
+
+        const rect = story.getBoundingClientRect();
+        const travel = Math.max(1, story.offsetHeight - innerHeight);
+        const progress = clamp(-rect.top / travel);
+        const chapterFloat = progress * (chapters.length - 1);
+        const active = Math.min(
+          chapters.length - 1,
+          Math.floor(chapterFloat + 0.5)
+        );
+
+        activateScreen(active);
+
+        chapters.forEach((chapter, i) => {
+          const distance = Math.abs(chapterFloat - i);
+          const opacity = clamp(1 - distance * 1.55);
+          const direction = chapterFloat - i;
+
+          chapter.style.opacity = opacity.toFixed(3);
+          chapter.style.transform =
+            `translateY(calc(-50% + ${direction * 34}px))`;
+        });
+
+        let x = 0;
+        let y = 0;
+        let scale = 1;
+        let rotate = -4;
+        let tilt = 0;
+
+        if (progress < 0.09) {
+          const t = ease(progress / 0.09);
+          x = lerp(34, 0, t);
+          y = lerp(110, 0, t);
+          scale = lerp(0.82, 1, t);
+          rotate = lerp(-12, -4, t);
+        } else if (progress < 0.22) {
+          const t = ease((progress - 0.09) / 0.13);
+          x = lerp(0, 18, t);
+          y = lerp(0, -18, t);
+          scale = lerp(1, 1.08, t);
+          rotate = lerp(-4, 4, t);
+          tilt = lerp(0, -4, t);
+        } else if (progress < 0.42) {
+          const t = ease((progress - 0.22) / 0.2);
+          x = lerp(18, -18, t);
+          y = lerp(-18, 12, t);
+          scale = lerp(1.08, 0.96, t);
+          rotate = lerp(4, -5, t);
+          tilt = lerp(-4, 3, t);
+        } else if (progress < 0.62) {
+          const t = ease((progress - 0.42) / 0.2);
+          x = lerp(-18, 22, t);
+          y = lerp(12, -10, t);
+          scale = lerp(0.96, 1.06, t);
+          rotate = lerp(-5, 3, t);
+          tilt = lerp(3, -3, t);
+        } else if (progress < 0.84) {
+          const t = ease((progress - 0.62) / 0.22);
+          x = lerp(22, -10, t);
+          y = lerp(-10, 20, t);
+          scale = lerp(1.06, 0.98, t);
+          rotate = lerp(3, -4, t);
+          tilt = lerp(-3, 2, t);
+        } else {
+          const t = ease((progress - 0.84) / 0.16);
+          x = lerp(-10, -42, t);
+          y = lerp(20, -130, t);
+          scale = lerp(0.98, 0.62, t);
+          rotate = lerp(-4, -15, t);
+          tilt = lerp(2, 8, t);
+        }
+
+        const mobile = innerWidth <= 620;
+
+        storyPhone.style.transform =
+          `translate3d(${mobile ? x * 0.45 : x}vw,${y}px,0)
+           rotateY(${tilt}deg)
+           rotateZ(${rotate}deg)
+           scale(${scale})`;
+
+        storyBg.style.setProperty("--glow-x", `${50 + x * 0.8}%`);
+      }
+
+      function onScroll() {
+        latestY = scrollY;
+
+        if (!ticking) {
+          ticking = true;
+          requestAnimationFrame(render);
+        }
+      }
+
+      addEventListener("scroll", onScroll, { passive: true });
+      addEventListener("resize", onScroll, { passive: true });
+      reduceMotion.addEventListener?.("change", onScroll);
+
+      activateScreen(0);
+      onScroll();
+    })();
+  </script>
+</body>
+</html>

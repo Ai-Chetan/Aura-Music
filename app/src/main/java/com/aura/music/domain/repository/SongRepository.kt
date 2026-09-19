@@ -9,13 +9,6 @@ import java.util.UUID
 interface SongRepository {
     fun observeAllSongs(): Flow<List<SongWithTags>>
 
-    fun observeSongsByTags(
-        tagNames: List<String>,
-        matchAll: Boolean
-    ): Flow<List<SongEntity>>
-
-    fun searchSongs(query: String): Flow<List<SongEntity>>
-
     suspend fun getSongById(songId: Long): SongEntity?
 
     suspend fun getSongsByIds(songIds: List<Long>): List<SongEntity>
@@ -64,8 +57,6 @@ interface SongRepository {
 
     suspend fun deleteSong(songId: Long)
 
-    suspend fun recordPlay(songId: Long)
-
     /**
      * Full or selective library JSON backup. Songs carrying ANY tag in
      * [excludeTagNames] are left out — unless [onlySongIds] is given, in which
@@ -103,8 +94,6 @@ interface SongRepository {
 
     /** Live playlist imports (unfinished only), for progress cards. */
     fun observePlaylistImports(): Flow<List<PlaylistImportState>>
-
-    fun observeMostPlayed(limit: Int): Flow<List<SongEntity>>
 
     fun observeRecentlyPlayed(limit: Int): Flow<List<SongEntity>>
 }

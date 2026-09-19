@@ -1,6 +1,7 @@
 package com.aura.music.playback
 
 import android.content.Intent
+import android.util.Log
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -8,7 +9,10 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.cache.CacheDataSource
+import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
@@ -30,6 +34,10 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class PlaybackService : MediaSessionService() {
 
+    private companion object {
+        const val TAG = "PlaybackService"
+    }
+
     @Inject
     lateinit var songDao: SongDao
 
@@ -38,6 +46,9 @@ class PlaybackService : MediaSessionService() {
 
     @Inject
     lateinit var audioVisualizer: AudioVisualizer
+
+    @Inject
+    lateinit var cacheDataSourceFactory: CacheDataSource.Factory
 
     private var mediaSession: MediaSession? = null
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -52,9 +63,27 @@ class PlaybackService : MediaSessionService() {
             .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
             .build()
 
+        // Fast-start tuning for streaming tracks: begin playback after ~1.5s
+        // is buffered, keep 10–30s ahead, and serve repeats/seeks from the
+        // disk cache. Local files are unaffected (already on disk).
+        val loadControl = DefaultLoadControl.Builder()
+            .setBufferDurationsMs(
+                /* minBufferMs */ 10_000,
+                /* maxBufferMs */ 30_000,
+                /* bufferForPlaybackMs */ 1_500,
+                /* bufferForPlaybackAfterRebufferMs */ 2_500
+            )
+            .setPrioritizeTimeOverSizeThresholds(true)
+            .build()
+
+        val mediaSourceFactory = DefaultMediaSourceFactory(this)
+            .setDataSourceFactory(cacheDataSourceFactory)
+
         val player = ExoPlayer.Builder(this)
             .setAudioAttributes(audioAttributes, true)
             .setHandleAudioBecomingNoisy(true)
+            .setLoadControl(loadControl)
+            .setMediaSourceFactory(mediaSourceFactory)
             .build()
 
         player.addListener(object : Player.Listener {
@@ -62,7 +91,9 @@ class PlaybackService : MediaSessionService() {
                 if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO ||
                     reason == Player.MEDIA_ITEM_TRANSITION_REASON_SEEK
                 ) {
-                    val mediaId = mediaItem?.mediaId?.toLongOrNull() ?: return
+                    // Vault rows only — transient streaming ids (< 0) have no
+                    // DB row (streaming taste is recorded per-bookmark instead).
+                    val mediaId = mediaItem?.mediaId?.toLongOrNull()?.takeIf { it >= 0 } ?: return
                     serviceScope.launch {
                         songDao.incrementPlayCount(mediaId, System.currentTimeMillis())
                     }
@@ -74,6 +105,9 @@ class PlaybackService : MediaSessionService() {
                     startPositionSaving(player)
                 } else {
                     stopPositionSaving()
+                    // Pausing is the most common "I'll be back" moment —
+                    // snapshot now so resume lands exactly here.
+                    saveQueueState()
                 }
             }
 
@@ -113,7 +147,28 @@ class PlaybackService : MediaSessionService() {
     }
 
     override fun onDestroy() {
-        saveQueueState()
+        // Persist the resume position, but bounded: an unbounded block on the
+        // main thread here risks an ANR if the DB is contended during teardown.
+        // A short latch keeps the write in the vast majority of cases and
+        // gives up gracefully when the system is tearing us down hard.
+        try {
+            val snapshot = buildQueueSnapshot()
+            val done = java.util.concurrent.CountDownLatch(1)
+            val write = serviceScope.launch(Dispatchers.IO) {
+                try {
+                    if (snapshot != null) queueStateDao.saveQueueState(snapshot)
+                    else queueStateDao.clearQueueState()
+                } catch (e: Exception) {
+                    Log.w(TAG, "Queue-state save on destroy failed", e)
+                } finally {
+                    done.countDown()
+                }
+            }
+            done.await(2, java.util.concurrent.TimeUnit.SECONDS)
+            if (!write.isCompleted) write.cancel()
+        } catch (e: Exception) {
+            Log.w(TAG, "Queue-state teardown failed", e)
+        }
         stopPositionSaving()
         mediaSession?.run {
             player.release()
@@ -140,30 +195,45 @@ class PlaybackService : MediaSessionService() {
     }
 
     private fun saveQueueState() {
-        val player = mediaSession?.player ?: return
+        val snapshot = buildQueueSnapshot()
+        serviceScope.launch(Dispatchers.IO) {
+            try {
+                // Empty player (queue cleared / all removed) must clear the
+                // snapshot too, or a deleted queue resurrects on next launch.
+                if (snapshot != null) queueStateDao.saveQueueState(snapshot)
+                else queueStateDao.clearQueueState()
+            } catch (e: Exception) {
+                // Silent loss here means the resume position silently breaks.
+                Log.w(TAG, "Queue-state save failed", e)
+            }
+        }
+    }
+
+    /** Snapshot on the caller thread (player state), persisted off Main. */
+    private fun buildQueueSnapshot(): QueueStateEntity? {
+        val player = mediaSession?.player ?: return null
         val songIds = (0 until player.mediaItemCount).mapNotNull { index ->
             player.getMediaItemAt(index).mediaId.toLongOrNull()
         }
-
-        if (songIds.isEmpty()) return
+        if (songIds.isEmpty()) return null
 
         val repeatModeStr = when (player.repeatMode) {
             Player.REPEAT_MODE_ONE -> "one"
             Player.REPEAT_MODE_ALL -> "all"
             else -> "off"
         }
+        val currentId = if (player.currentMediaItemIndex in 0 until player.mediaItemCount) {
+            player.getMediaItemAt(player.currentMediaItemIndex).mediaId.toLongOrNull() ?: -1L
+        } else -1L
 
-        serviceScope.launch {
-            queueStateDao.saveQueueState(
-                QueueStateEntity(
-                    id = 0,
-                    songIdsJson = songIds.joinToString(","),
-                    currentIndex = player.currentMediaItemIndex,
-                    positionMs = player.currentPosition,
-                    shuffleEnabled = player.shuffleModeEnabled,
-                    repeatMode = repeatModeStr
-                )
-            )
-        }
+        return QueueStateEntity(
+            id = 0,
+            songIdsJson = songIds.joinToString(","),
+            currentIndex = player.currentMediaItemIndex,
+            currentSongId = currentId,
+            positionMs = player.currentPosition,
+            shuffleEnabled = player.shuffleModeEnabled,
+            repeatMode = repeatModeStr
+        )
     }
 }

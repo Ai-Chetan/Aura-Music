@@ -21,6 +21,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import coil.ImageLoader
+import coil.compose.LocalImageLoader
+import androidx.compose.runtime.CompositionLocalProvider
 import com.aura.music.data.DefaultTagSeeder
 import com.aura.music.ui.components.AuraSplash
 import com.aura.music.ui.navigation.AuraNavHost
@@ -35,6 +38,10 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var defaultTagSeeder: DefaultTagSeeder
 
+    /** Data-saver-aware artwork loader (blocks remote art when gate is closed). */
+    @Inject
+    lateinit var coilImageLoader: ImageLoader
+
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { _ ->
@@ -46,7 +53,11 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         lifecycleScope.launch {
-            defaultTagSeeder.seedIfEmpty()
+            try {
+                defaultTagSeeder.seedIfEmpty()
+            } catch (_: Exception) {
+                // Seeding is cosmetic; a DB hiccup at cold start must not crash the app.
+            }
         }
 
         requestNotificationPermissionIfNeeded()
@@ -54,6 +65,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             AuraTheme {
+                CompositionLocalProvider(LocalImageLoader provides coilImageLoader) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -70,6 +82,7 @@ class MainActivity : ComponentActivity() {
                             AuraSplash(onDone = { showSplash = false })
                         }
                     }
+                }
                 }
             }
         }

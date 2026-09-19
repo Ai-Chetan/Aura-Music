@@ -8,8 +8,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -37,14 +40,18 @@ fun AlbumArt(
     cornerRadius: Dp = 12.dp
 ) {
     val shape = RoundedCornerShape(cornerRadius)
-    val model: Any? = when {
-        thumbnailPath.isNullOrBlank() -> null
-        thumbnailPath.startsWith("http") -> thumbnailPath
-        else -> try {
-            val f = File(thumbnailPath)
-            if (f.exists()) f else thumbnailPath
-        } catch (_: Exception) {
-            thumbnailPath
+    // remembered: File.exists() is disk I/O — must not rerun on every
+    // recomposition of every row in a scrolling list.
+    val model: Any? = remember(thumbnailPath) {
+        when {
+            thumbnailPath.isNullOrBlank() -> null
+            thumbnailPath.startsWith("http") -> thumbnailPath
+            else -> try {
+                val f = File(thumbnailPath)
+                if (f.exists()) f else thumbnailPath
+            } catch (_: Exception) {
+                thumbnailPath
+            }
         }
     }
 
@@ -68,12 +75,16 @@ fun AlbumArt(
             ),
         contentAlignment = Alignment.Center
     ) {
-        if (model != null) {
+        var loadFailed by remember(thumbnailPath) { mutableStateOf(false) }
+        if (model != null && !loadFailed) {
             AsyncImage(
                 model = model,
                 contentDescription = contentDescription,
                 modifier = Modifier.matchParentSize(),
-                contentScale = ContentScale.Crop
+                contentScale = ContentScale.Crop,
+                // Remote art blocked by Data Saver (or any failure) falls
+                // back to the note glyph instead of an empty box.
+                onError = { loadFailed = true }
             )
         } else {
             Icon(
@@ -84,18 +95,4 @@ fun AlbumArt(
             )
         }
     }
-}
-
-/** Accent-tinted playing indicator ring used by rows + mini player. */
-@Composable
-fun PlayingRing(show: Boolean, modifier: Modifier = Modifier) {
-    if (!show) return
-    Box(
-        modifier = modifier
-            .border(
-                width = 2.dp,
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
-                shape = RoundedCornerShape(14.dp)
-            )
-    )
 }

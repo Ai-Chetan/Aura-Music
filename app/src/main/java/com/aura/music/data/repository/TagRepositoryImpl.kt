@@ -20,21 +20,6 @@ class TagRepositoryImpl @Inject constructor(
     override fun observeTagsForSong(songId: Long): Flow<List<TagEntity>> =
         tagDao.getTagsForSong(songId)
 
-    override suspend fun createTag(name: String, colorHex: String?): Long {
-        val normalizedName = normalizeTagName(name)
-        require(normalizedName.isNotBlank()) { "Tag name cannot be blank" }
-
-        val existing = tagDao.getTagByName(normalizedName)
-        if (existing != null) return existing.id
-
-        return tagDao.insertTag(
-            TagEntity(
-                name = normalizedName,
-                colorHex = resolveColor(normalizedName, colorHex)
-            )
-        )
-    }
-
     override suspend fun getOrCreateTag(name: String, colorHex: String?): Long {
         val normalizedName = normalizeTagName(name)
         val existing = tagDao.getTagByName(normalizedName)
@@ -62,10 +47,6 @@ class TagRepositoryImpl @Inject constructor(
 
     override suspend fun removeTagFromSong(songId: Long, tagId: Long) {
         tagDao.removeTagFromSong(SongTagCrossRef(songId = songId, tagId = tagId))
-    }
-
-    override suspend fun deleteTag(tagId: Long) {
-        tagDao.deleteTagById(tagId)
     }
 
     private fun normalizeTagName(name: String): String =

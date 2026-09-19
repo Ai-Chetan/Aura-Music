@@ -17,10 +17,14 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -31,6 +35,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,9 +50,13 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import com.aura.music.ui.components.AlbumArt
 import com.aura.music.ui.components.AmbientBackground
+import com.aura.music.ui.components.AuraEmptyState
+import com.aura.music.ui.components.AuraToast
 import com.aura.music.ui.components.AuraTopBar
 import com.aura.music.ui.components.QualityBadge
 import com.aura.music.ui.components.TagChip
+import com.aura.music.ui.components.collectToast
+import com.aura.music.ui.theme.AuraRadius
 import com.aura.music.ui.theme.AuraSpacing
 import com.aura.music.util.formatDuration
 
@@ -58,7 +67,8 @@ fun SongDetailScreen(
     viewModel: SongDetailViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    var newTagName by remember { mutableStateOf("") }
+    val toast = collectToast(viewModel.messages)
+    var newTagName by rememberSaveable { mutableStateOf("") }
 
     Box(modifier = Modifier.fillMaxSize()) {
         AmbientBackground()
@@ -90,13 +100,16 @@ fun SongDetailScreen(
                     .padding(AuraSpacing.Xxl),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = "Not found",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                AuraEmptyState(
+                    icon = Icons.Default.MusicNote,
+                    title = "Song not found",
+                    subtitle = "It may have been deleted from your vault.",
+                    actionLabel = "Go back",
+                    onAction = onBack
                 )
             }
-            return@Column
+            AuraToast(toast)
+            return@Box
         }
 
         Row(
@@ -109,7 +122,7 @@ fun SongDetailScreen(
                 thumbnailPath = song.thumbnailPath,
                 contentDescription = song.title,
                 size = 76.dp,
-                cornerRadius = 16.dp
+                cornerRadius = AuraRadius.Lg
             )
 
             Spacer(modifier = Modifier.width(AuraSpacing.Md))
@@ -134,6 +147,21 @@ fun SongDetailScreen(
                 Spacer(modifier = Modifier.height(AuraSpacing.Xxs))
                 QualityBadge(codec = song.audioFormat, bitrateKbps = song.bitrateKbps)
             }
+        }
+
+        Spacer(modifier = Modifier.height(AuraSpacing.Xl))
+
+        Button(
+            onClick = viewModel::playSong,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = AuraSpacing.Md)
+                .height(48.dp),
+            shape = RoundedCornerShape(AuraRadius.Lg)
+        ) {
+            Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null)
+            Spacer(modifier = Modifier.width(AuraSpacing.Xs))
+            Text("Play")
         }
 
         Spacer(modifier = Modifier.height(AuraSpacing.Xl))
@@ -265,5 +293,6 @@ fun SongDetailScreen(
 
         Spacer(modifier = Modifier.height(AuraSpacing.Xxl))
     }
+        AuraToast(toast)
     }
 }

@@ -32,7 +32,11 @@ data class BackupUiState(
     /** Set when the JSON is ready — the screen fires the save dialog once. */
     val pendingExportJson: String? = null,
     val pendingExportName: String? = null,
+    /** Bumped per export so repeat taps re-fire the dialog (same keys stall it). */
+    val pendingExportSeq: Int = 0,
     val exportMessage: String? = null,
+    /** True when the last export/share succeeded (drives success styling). */
+    val exportSucceeded: Boolean = false,
     /** Set when a share file is staged — the screen fires the chooser once. */
     val pendingShareUri: Uri? = null,
     val importFileName: String? = null,
@@ -98,10 +102,21 @@ class BackupViewModel @Inject constructor(
     private fun exportScope(): Pair<Set<String>, Set<Long>?> {
         val s = _uiState.value
         return if (s.selectiveExport) {
-            emptySet<String>() to s.selectedSongIds.ifEmpty { null }
+            // Selective mode with nothing selected exports NOTHING — never
+            // silently fall back to the full vault (null means "everything").
+            if (s.selectedSongIds.isEmpty()) {
+                emptySet<String>() to emptySet<Long>()
+            } else {
+                emptySet<String>() to s.selectedSongIds
+            }
         } else {
             s.excludedTags to null
         }
+    }
+
+    /** Clears a prepared export (e.g. the save dialog was cancelled). */
+    fun cancelExport() {
+        _uiState.update { it.copy(pendingExportJson = null, pendingExportName = null) }
     }
 
     fun startExport() {
@@ -118,6 +133,7 @@ class BackupViewModel @Inject constructor(
                         it.copy(
                             pendingExportJson = json,
                             pendingExportName = name,
+                            pendingExportSeq = it.pendingExportSeq + 1,
                             exportMessage = null
                         )
                     }
@@ -148,7 +164,8 @@ class BackupViewModel @Inject constructor(
                         it.copy(
                             pendingExportJson = null,
                             pendingExportName = null,
-                            exportMessage = "Library exported."
+                            exportMessage = "Library exported.",
+                            exportSucceeded = true
                         )
                     }
                 }
@@ -157,15 +174,12 @@ class BackupViewModel @Inject constructor(
                         it.copy(
                             pendingExportJson = null,
                             pendingExportName = null,
-                            exportMessage = "Export failed: ${e.message}"
+                            exportMessage = "Export failed: ${e.message}",
+                            exportSucceeded = false
                         )
                     }
                 }
         }
-    }
-
-    fun consumeExportMessage() {
-        _uiState.update { it.copy(exportMessage = null) }
     }
 
     /** Stage the current export scope as a cache file and expose a share Uri. */

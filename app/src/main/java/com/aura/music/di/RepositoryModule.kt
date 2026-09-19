@@ -1,7 +1,9 @@
 package com.aura.music.di
 
+import com.aura.music.data.repository.SavedTrackRepositoryImpl
 import com.aura.music.data.repository.SongRepositoryImpl
 import com.aura.music.data.repository.TagRepositoryImpl
+import com.aura.music.domain.repository.SavedTrackRepository
 import com.aura.music.domain.repository.SongRepository
 import com.aura.music.domain.repository.TagRepository
 import dagger.Binds
@@ -25,4 +27,10 @@ abstract class RepositoryModule {
     abstract fun bindTagRepository(
         impl: TagRepositoryImpl
     ): TagRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindSavedTrackRepository(
+        impl: SavedTrackRepositoryImpl
+    ): SavedTrackRepository
 }

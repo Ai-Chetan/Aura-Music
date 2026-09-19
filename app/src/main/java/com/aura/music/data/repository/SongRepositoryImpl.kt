@@ -14,6 +14,8 @@ import com.aura.music.data.db.SongEntity
 import com.aura.music.data.db.SongWithTags
 import com.aura.music.data.download.DownloadAudioWorker
 import com.aura.music.data.download.PlaylistImportWorker
+import com.aura.music.data.network.ConnectivityMonitor
+import com.aura.music.data.network.NetStatus
 import com.aura.music.domain.repository.ActiveDownload
 import com.aura.music.domain.repository.BatchItem
 import com.aura.music.domain.repository.ExtractedStreamInfo
@@ -36,7 +38,9 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import java.util.concurrent.TimeUnit
 import java.io.File
 import java.util.UUID
@@ -48,25 +52,12 @@ class SongRepositoryImpl @Inject constructor(
     private val songDao: SongDao,
     private val extractionRepository: ExtractionRepository,
     private val tagRepository: TagRepository,
+    private val connectivityMonitor: ConnectivityMonitor,
     @ApplicationContext private val context: Context
 ) : SongRepository {
 
     override fun observeAllSongs(): Flow<List<SongWithTags>> =
         songDao.getAllSongsWithTags()
-
-    override fun observeSongsByTags(
-        tagNames: List<String>,
-        matchAll: Boolean
-    ): Flow<List<SongEntity>> {
-        return if (matchAll) {
-            songDao.getSongsMatchingAllTags(tagNames, tagNames.size)
-        } else {
-            songDao.getSongsMatchingAnyTag(tagNames)
-        }
-    }
-
-    override fun searchSongs(query: String): Flow<List<SongEntity>> =
-        songDao.searchSongs(query)
 
     override suspend fun getSongById(songId: Long): SongEntity? =
         songDao.getSongById(songId)
@@ -80,13 +71,28 @@ class SongRepositoryImpl @Inject constructor(
             if (!YoutubeUrls.isYouTubeUrl(canonical)) {
                 return Result.failure(Exception(YoutubeUrls.rejectionReason(url)))
             }
+            // Fail fast offline: the worker needs CONNECTED and would sit in
+            // ENQUEUED forever, hanging the await below (and serial imports).
+            if (connectivityMonitor.status.value is NetStatus.Offline) {
+                return Result.failure(Exception("You're offline — connect to download."))
+            }
             val workId = enqueueDownload(canonical)
             val workManager = WorkManager.getInstance(context)
 
             // Await the terminal WorkManager state before reporting success/failure.
-            val finished = workManager.getWorkInfoByIdFlow(workId)
-                .first { it?.state?.isFinished == true }
-                ?: return Result.failure(Exception("Download was cancelled"))
+            // Bounded: a worker parked on the CONNECTED constraint (network drop
+            // mid-await) must not hang the caller (and serial imports) forever.
+            val finished = try {
+                withTimeout(AWAIT_TIMEOUT_MS) {
+                    workManager.getWorkInfoByIdFlow(workId)
+                        .first { it?.state?.isFinished == true }
+                }
+            } catch (e: TimeoutCancellationException) {
+                workManager.cancelWorkById(workId)
+                return Result.failure(
+                    Exception("Download timed out — check your connection and retry.")
+                )
+            } ?: return Result.failure(Exception("Download was cancelled"))
 
             if (finished.state == WorkInfo.State.SUCCEEDED) {
                 val songId = finished.outputData.getLong(DownloadAudioWorker.KEY_SONG_ID, -1L)
@@ -286,10 +292,8 @@ class SongRepositoryImpl @Inject constructor(
                 return Result.failure(Exception(YoutubeUrls.rejectionReason(url)))
             }
             val playlist = extractionRepository.resolvePlaylist(canonical)
-            var duplicates = 0
-            playlist.videoUrls.forEach { videoUrl ->
-                if (songDao.getBySourceUrl(videoUrl) != null) duplicates++
-            }
+            val existing = songDao.getExistingSourceUrls(playlist.videoUrls).toSet()
+            val duplicates = playlist.videoUrls.count { it in existing }
             Result.success(
                 PlaylistPreview(
                     title = playlist.title,
@@ -330,7 +334,15 @@ class SongRepositoryImpl @Inject constructor(
             .addTag(PlaylistImportWorker.PLAYLIST_TAG)
             .build()
 
-        WorkManager.getInstance(context).enqueue(workRequest)
+        // Unique per playlist URL: a re-tap while it runs chains behind the
+        // running worker (APPEND) instead of downloading in parallel — the
+        // second pass finds everything already saved, skips, and merges tags.
+        // (KEEP would drop the new request id and hang progress observers.)
+        WorkManager.getInstance(context).enqueueUniqueWork(
+            "playlist-import-$canonical",
+            androidx.work.ExistingWorkPolicy.APPEND,
+            workRequest
+        )
         return workRequest.id
     }
 
@@ -362,10 +374,6 @@ class SongRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun recordPlay(songId: Long) {
-        songDao.incrementPlayCount(songId, System.currentTimeMillis())
-    }
-
     override suspend fun exportLibraryJson(
         excludeTagNames: Set<String>,
         onlySongIds: Set<Long>?
@@ -390,11 +398,9 @@ class SongRepositoryImpl @Inject constructor(
 
     override suspend fun describeImport(json: String): Result<ImportPreview> {
         val parsed = LibraryBackup.parseImport(json).getOrElse { return Result.failure(it) }
-        var duplicates = 0
-        parsed.entries.forEach { entry ->
-            val canonical = YoutubeUrls.canonicalUrl(entry.sourceUrl)
-            if (songDao.getBySourceUrl(canonical) != null) duplicates++
-        }
+        val canonicalUrls = parsed.entries.map { YoutubeUrls.canonicalUrl(it.sourceUrl) }
+        val existing = songDao.getExistingSourceUrls(canonicalUrls).toSet()
+        val duplicates = canonicalUrls.count { it in existing }
         return Result.success(
             ImportPreview(
                 total = parsed.entries.size,
@@ -462,9 +468,11 @@ class SongRepositoryImpl @Inject constructor(
         )
     }
 
-    override fun observeMostPlayed(limit: Int): Flow<List<SongEntity>> =
-        songDao.getMostPlayed(limit)
-
     override fun observeRecentlyPlayed(limit: Int): Flow<List<SongEntity>> =
         songDao.getRecentlyPlayed(limit)
+
+    private companion object {
+        /** Cap on awaiting a one-off download; large playlists use the batch worker instead. */
+        const val AWAIT_TIMEOUT_MS = 10 * 60 * 1000L
+    }
 }
