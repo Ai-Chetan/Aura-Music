@@ -6,15 +6,15 @@ A private, on-device music player: paste a YouTube link, keep the best-available
 
 ## Screenshots
 
-| Library | Add (paste link) | Now playing |
+| Home | Library | Add (search) |
 |---|---|---|
-| ![Library](docs/screenshots/08-library-downloaded-tag-filters.png) | ![Add](docs/screenshots/16-add-paste-link-preview.png) | ![Now playing](docs/screenshots/11-now-playing.png) |
+| ![Home](docs/screenshots/01-home-continue-listening-top-hits.png) | ![Library](docs/screenshots/09-library-saved-tab.png) | ![Add search](docs/screenshots/15-search-results-ordinary.png) |
 
-| Song details | Backup | Lock screen |
+| Add (paste link) | Now playing | Backup |
 |---|---|---|
-| ![Song details](docs/screenshots/10-song-details-tag-editor.png) | ![Backup](docs/screenshots/06-backup-export-import.png) | ![Lock screen](docs/screenshots/21-lock-screen-media-controls.png) |
+| ![Add link](docs/screenshots/16-add-paste-link-preview.png) | ![Now playing](docs/screenshots/11-now-playing.png) | ![Backup](docs/screenshots/06-backup-export-import.png) |
 
-Full set (Home, Library tabs, queue, search, notifications, output switcher): [`docs/screenshots/`](docs/screenshots/).
+Full set (Home, Library tabs, queue, search, notification, lock screen): [`docs/screenshots/`](docs/screenshots/).
 
 ## Features
 
