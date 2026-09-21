@@ -55,7 +55,7 @@ object TagColors {
 
     /**
      * Display-only fallback (no DB access): semantic first,
-     * then a stable hash pick so legacy null-color rows still vary.
+     * then a stable hash pick so rows without a stored color still vary.
      */
     fun displayFor(name: String, colorHex: String?): String {
         if (!colorHex.isNullOrBlank()) return colorHex

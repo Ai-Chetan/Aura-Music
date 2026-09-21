@@ -86,8 +86,7 @@ class SongFileDownloader @Inject constructor(
             }
 
             // Unicode-safe: keep letters/numbers across scripts (Hindi,
-            // Tamil, CJK…) — the old ASCII-only class emptied non-Latin
-            // titles and collapsed every such download to "audio_<rand>".
+            // Tamil, CJK…) so non-Latin titles keep a readable file stem.
             val safeTitle = streamInfo.title
                 .take(60)
                 .replace(Regex("[^\\p{L}\\p{N} _-]"), "")

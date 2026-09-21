@@ -48,6 +48,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.QueueMusic
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
@@ -64,12 +65,12 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -79,6 +80,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -103,14 +107,11 @@ import com.aura.music.ui.components.TagChip
 import com.aura.music.ui.components.collectToast
 import com.aura.music.ui.theme.AuraRadius
 import com.aura.music.ui.theme.AuraSpacing
+import com.aura.music.ui.tour.TourAnchors
+import com.aura.music.ui.tour.tourAnchor
 import com.aura.music.util.downloadBytesDetail
 import com.aura.music.util.downloadStageLabel
 import com.aura.music.util.formatDuration
-
-/** Rows composed in the first window; more load as the user scrolls. */
-private const val LIBRARY_PAGE_SIZE = 20
-/** Start loading the next window this many rows before the end. */
-private const val LOAD_MORE_THRESHOLD = 6
 
 @Composable
 fun LibraryScreen(
@@ -130,6 +131,7 @@ fun LibraryScreen(
     val savedFilter by viewModel.savedFilterState.collectAsStateWithLifecycle()
     val savedLoading by viewModel.savedLoading.collectAsStateWithLifecycle()
     val savedSort by viewModel.savedSortMode.collectAsStateWithLifecycle()
+    val spiceUpOn by viewModel.spiceUp.collectAsStateWithLifecycle()
     val toast = collectToast(viewModel.messages)
     var sortMenuOpen by remember { mutableStateOf(false) }
     // 0 = Downloaded (offline), 1 = Saved (streams, needs internet).
@@ -159,35 +161,36 @@ fun LibraryScreen(
         }
     }
 
-    // Batched rendering: with hundreds of songs only the first window is
-    // composed up front; scrolling near the end grows the window. Any
-    // filter/sort/search change restarts from the first window. Saveable so
-    // rotation doesn't collapse a long list back to 20 rows.
-    var visibleLimit by rememberSaveable { mutableIntStateOf(LIBRARY_PAGE_SIZE) }
-    LaunchedEffect(
-        state.searchQuery,
-        state.selectedTagNames,
-        state.excludedTagNames,
-        state.matchAll,
-        state.sortMode
-    ) {
-        visibleLimit = LIBRARY_PAGE_SIZE
-    }
-    val visibleSongs = remember(state.songs, visibleLimit) {
-        state.songs.take(visibleLimit)
-    }
-    val nearEnd by remember {
-        derivedStateOf {
-            val lastVisible =
-                songListState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            lastVisible >= visibleLimit - LOAD_MORE_THRESHOLD
+    // Completed downloads land at the top of the list (recent-first), but
+    // LazyColumn anchors the viewport to the first visible row's key — so
+    // new songs would pile up just above the fold, unseen. While the user
+    // is at the top (watching downloads land), stay pinned to the newest
+    // row; if they scrolled away, never yank them back.
+    var lastSongCount by rememberSaveable { mutableIntStateOf(-1) }
+    LaunchedEffect(state.songs.size) {
+        val previous = lastSongCount
+        lastSongCount = state.songs.size
+        if (previous >= 0 && state.songs.size > previous &&
+            songListState.firstVisibleItemIndex <= 1
+        ) {
+            songListState.scrollToItem(0)
         }
     }
-    LaunchedEffect(nearEnd, state.songs.size) {
-        if (nearEnd && visibleLimit < state.songs.size) {
-            visibleLimit = (visibleLimit + LIBRARY_PAGE_SIZE)
-                .coerceAtMost(state.songs.size)
-        }
+
+    // The Saved list the shuffle button plays: same filter + search the tab
+    // shows, so "shuffle" means the playlist the user is actually looking at.
+    val savedShuffleList = remember(savedTracks, state.searchQuery, savedFilter) {
+        savedTracks.filter { item ->
+            matchesLibraryFilters(
+                title = item.track.title,
+                artist = item.track.artist,
+                tagNames = item.tags.map { it.name }.toSet(),
+                query = state.searchQuery.trim(),
+                selected = savedFilter.selectedTagNames,
+                excluded = savedFilter.excludedTagNames,
+                matchAll = savedFilter.matchAll
+            )
+        }.map { it.track }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -207,7 +210,10 @@ fun LibraryScreen(
                 title = "Your Music Library",
                 subtitle = "${state.songs.size} downloaded • ${savedTracks.size} saved",
                 actions = {
-                    IconButton(onClick = onAddSongClick) {
+                    IconButton(
+                        onClick = onAddSongClick,
+                        modifier = Modifier.tourAnchor(TourAnchors.LIB_ADD)
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Add,
                             contentDescription = "Search music",
@@ -263,7 +269,8 @@ fun LibraryScreen(
                 tab = tab,
                 onTabChange = { tab = it },
                 downloadedCount = state.songs.size,
-                savedCount = savedTracks.size
+                savedCount = savedTracks.size,
+                modifier = Modifier.tourAnchor(TourAnchors.LIB_TABS)
             )
 
             Spacer(modifier = Modifier.height(AuraSpacing.Sm))
@@ -272,10 +279,31 @@ fun LibraryScreen(
                 value = state.searchQuery,
                 onValueChange = viewModel::setSearchQuery,
                 placeholder = if (tab == 0) "Search downloads" else "Search saved",
-                modifier = Modifier.padding(horizontal = AuraSpacing.Md)
+                modifier = Modifier
+                    .tourAnchor(TourAnchors.LIB_SEARCH)
+                    .padding(horizontal = AuraSpacing.Md)
             )
 
-            Spacer(modifier = Modifier.height(AuraSpacing.Sm))
+            Spacer(modifier = Modifier.height(AuraSpacing.Xxs))
+
+            // Playlist controls for the active tab: randomise the order, or
+            // keep engine recommendations flowing in behind the list.
+            LibraryControlsRow(
+                onShuffle = {
+                    if (tab == 0) {
+                        viewModel.shuffleDownloads(state.songs.map { it.song })
+                        onPlaySong()
+                    } else {
+                        viewModel.shuffleSaved(savedShuffleList) { onPlaySong() }
+                    }
+                },
+                shuffleEnabled = if (tab == 0) state.songs.isNotEmpty() else savedShuffleList.isNotEmpty(),
+                spiceUp = spiceUpOn,
+                onToggleSpice = { viewModel.toggleSpiceUp() },
+                modifier = Modifier.tourAnchor(TourAnchors.LIB_CONTROLS)
+            )
+
+            Spacer(modifier = Modifier.height(AuraSpacing.Xxs))
 
             if (tab == 1) {
                 val savedSorted = remember(savedTracks, savedSort) {
@@ -398,19 +426,33 @@ fun LibraryScreen(
                     contentPadding = PaddingValues(top = AuraSpacing.Xs, bottom = AuraSpacing.BottomListPadding)
                 ) {
                     items(
-                        items = visibleSongs,
+                        items = state.songs,
                         key = { it.song.id },
                         contentType = { "song" }
                     ) { songWithTags ->
-                        // Swipe right → add to queue (row snaps back, nothing is removed).
+                        // The tour highlights the first row when explaining
+                        // tap-to-play / long-press / swipe-to-queue.
+                        val rowModifier =
+                            if (songWithTags.song.id == state.songs.firstOrNull()?.song?.id) {
+                                Modifier.tourAnchor(TourAnchors.LIB_LIST)
+                            } else Modifier
+                        val density = LocalDensity.current
+                        // Queue-on-swipe must be a deliberate, wide gesture:
+                        // 40% of the row width, never less than 96dp. The
+                        // Material default (~56dp) fired on the slight
+                        // horizontal drift of an ordinary vertical scroll.
                         val swipeState = rememberSwipeToDismissBoxState(
                             confirmValueChange = { target ->
                                 if (target == SwipeToDismissBoxValue.StartToEnd) {
                                     viewModel.addToQueue(songWithTags.song)
                                 }
                                 false
+                            },
+                            positionalThreshold = { totalWidth ->
+                                maxOf(totalWidth * 0.40f, with(density) { 96.dp.toPx() })
                             }
                         )
+                        // Swipe right → add to queue (row snaps back, nothing is removed).
                         // Cheap mid-drag hint: driven by the swipe state, not
                         // per-frame coordinate tracking, so scrolling a large
                         // vault stays at 60fps.
@@ -437,6 +479,7 @@ fun LibraryScreen(
                                 SongRow(
                                     songWithTags = songWithTags,
                                     isPlaying = currentSongId == songWithTags.song.id,
+                                    modifier = rowModifier,
                                     onClick = {
                                         viewModel.playSong(songWithTags)
                                         onPlaySong()
@@ -454,32 +497,6 @@ fun LibraryScreen(
                                 )
                             }
                         )
-                    }
-                    if (state.songs.size > visibleLimit) {
-                        item(
-                            key = "loading-more",
-                            contentType = { "loading" }
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = AuraSpacing.Md),
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(20.dp),
-                                    strokeWidth = 2.dp,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                                Spacer(modifier = Modifier.width(AuraSpacing.Sm))
-                                Text(
-                                    text = "Showing $visibleLimit of ${state.songs.size}…",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
                     }
                 }
                 }
@@ -499,10 +516,11 @@ private fun LibraryTabs(
     tab: Int,
     onTabChange: (Int) -> Unit,
     downloadedCount: Int,
-    savedCount: Int
+    savedCount: Int,
+    modifier: Modifier = Modifier
 ) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = AuraSpacing.Md),
         horizontalArrangement = Arrangement.spacedBy(AuraSpacing.Xs)
@@ -532,6 +550,64 @@ private fun LibraryTabs(
                 )
             },
             modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+/**
+ * Playlist controls for whichever library tab is active. Shuffle plays the
+ * list in random order; Spice-up keeps recommended picks flowing in behind
+ * the queue (the engine's own taste model — skips shrink, replays grow).
+ */
+@Composable
+private fun LibraryControlsRow(
+    onShuffle: () -> Unit,
+    shuffleEnabled: Boolean,
+    spiceUp: Boolean,
+    onToggleSpice: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = AuraSpacing.Md),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(AuraRadius.Md))
+                .clickable(enabled = shuffleEnabled, onClick = onShuffle)
+                .padding(horizontal = AuraSpacing.Xs, vertical = AuraSpacing.Xxs),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.Shuffle,
+                contentDescription = null,
+                tint = if (shuffleEnabled) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(AuraSpacing.Xs))
+            Text(
+                text = "Shuffle play",
+                style = MaterialTheme.typography.labelLarge,
+                color = if (shuffleEnabled) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+            )
+        }
+        Spacer(modifier = Modifier.weight(1f))
+        Text(
+            text = "Spice up",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.width(AuraSpacing.Xs))
+        Switch(
+            checked = spiceUp,
+            onCheckedChange = onToggleSpice,
+            modifier = Modifier.semantics {
+                contentDescription = "Spice up: auto-add recommended picks behind the queue"
+            }
         )
     }
 }

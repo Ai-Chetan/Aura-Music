@@ -50,7 +50,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -91,6 +90,8 @@ import com.aura.music.ui.components.QualityBadge
 import com.aura.music.ui.components.collectToast
 import com.aura.music.ui.theme.AuraRadius
 import com.aura.music.ui.theme.AuraSpacing
+import com.aura.music.ui.tour.TourAnchors
+import com.aura.music.ui.tour.tourAnchor
 import com.aura.music.util.formatDuration
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -105,7 +106,6 @@ fun NowPlayingScreen(
     val state by viewModel.playerChrome.collectAsStateWithLifecycle()
     val song = state.song
     var showQueue by rememberSaveable { mutableStateOf(false) }
-    val spiceUpOn by viewModel.spiceUp.collectAsStateWithLifecycle()
     val savedUrls by viewModel.savedUrls.collectAsStateWithLifecycle()
     val toast = collectToast(viewModel.messages)
     var menuOpen by remember { mutableStateOf(false) }
@@ -147,7 +147,10 @@ fun NowPlayingScreen(
                 modifier = Modifier.weight(1f),
                 textAlign = TextAlign.Center
             )
-            IconButton(onClick = { showQueue = true }) {
+            IconButton(
+                onClick = { showQueue = true },
+                modifier = Modifier.tourAnchor(TourAnchors.NP_QUEUE)
+            ) {
                 Icon(
                     imageVector = Icons.Default.QueueMusic,
                     contentDescription = "Queue",
@@ -415,10 +418,6 @@ fun NowPlayingScreen(
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(horizontal = AuraSpacing.Lg, vertical = AuraSpacing.Xxs)
             )
-            SpiceUpRow(
-                enabled = spiceUpOn,
-                onToggle = viewModel::toggleSpiceUp
-            )
             Text(
                 text = "Tap to play, drag to reorder",
                 style = MaterialTheme.typography.bodySmall,
@@ -537,34 +536,6 @@ private fun ProgressSection(
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-    }
-}
-
-@Composable
-private fun SpiceUpRow(
-    enabled: Boolean,
-    onToggle: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onToggle)
-            .padding(horizontal = AuraSpacing.Lg, vertical = AuraSpacing.Xs),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = "Spice up my queue",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = "Auto-add random recommended picks behind this queue",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        Switch(checked = enabled, onCheckedChange = { onToggle() })
     }
 }
 

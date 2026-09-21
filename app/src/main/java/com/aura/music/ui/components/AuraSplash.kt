@@ -49,8 +49,8 @@ fun AuraSplash(
 
     // One continuous timeline per property (keyframes): appear →
     // hold → expand → fade. No back-to-back animateTo calls, so the
-    // zoom never restarts from zero velocity mid-flight (the old
-    // expand-stop-lurch). Shine finishes before the zoom, so the zoom
+    // zoom runs as a single smooth flight from start to finish.
+    // Shine finishes before the zoom, so the zoom
     // is a pure GPU layer transform with no text redraw.
     LaunchedEffect(Unit) {
         launch {

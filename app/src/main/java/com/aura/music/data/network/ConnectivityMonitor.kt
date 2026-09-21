@@ -64,9 +64,13 @@ class ConnectivityMonitor @Inject constructor(
             val network = connectivityManager.activeNetwork ?: return NetStatus.Offline
             val caps = connectivityManager.getNetworkCapabilities(network)
                 ?: return NetStatus.Offline
-            if (!caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) {
-                return NetStatus.Offline
-            }
+            // Optimistic: a live network with a transport counts as online.
+            // Android strips INTERNET/VALIDATED capabilities on networks it
+            // flags (captive portals, blocked validation probes, "no
+            // internet" marks) even when they work — trusting those flags
+            // reported "offline" on perfectly good Wi-Fi and bricked every
+            // dynamic feature. Real failures surface as per-request errors,
+            // each with its own retry, instead of a global dead gate.
             when {
                 caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> NetStatus.Wifi
                 caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> NetStatus.Mobile

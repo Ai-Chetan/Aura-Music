@@ -29,3 +29,6 @@ Desktop.ini
 
 # Logs
 *.log
+
+# Local scratch dirs (never commit)
+.tmp-songs/

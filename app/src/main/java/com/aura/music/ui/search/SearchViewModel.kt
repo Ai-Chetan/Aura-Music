@@ -110,8 +110,9 @@ class SearchViewModel @Inject constructor(
     }
 
     /**
-     * Instant play: the tapped result starts at once and the rest of the
-     * results become an up-next session filling the live queue.
+     * Instant play: the tapped result starts at once and the recommendation
+     * engine fills everything after it — a search tap is a radio seed, never
+     * "play the results in order".
      */
     fun playNow(track: YouTubeTrack, onPlaying: () -> Unit) {
         if (_uiState.value.resolvingUrl != null) return
@@ -129,11 +130,8 @@ class SearchViewModel @Inject constructor(
             try {
                 val transient = transients.fromTrack(track)
                 playbackController.playQueue(listOf(transient), 0)
+                upNext.startRadio()
                 savedTrackRepository.recordPlay(track.url)
-                val phase = _uiState.value.phase
-                if (phase is SearchPhase.Results) {
-                    upNext.startSession(phase.tracks, phase.tracks.indexOfFirst { it.url == track.url })
-                }
                 onPlaying()
             } catch (e: Exception) {
                 _messages.emit("Couldn't stream: ${e.message ?: "unknown error"}")

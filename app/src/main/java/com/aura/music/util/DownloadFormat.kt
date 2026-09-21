@@ -1,8 +1,8 @@
 package com.aura.music.util
 
 /**
- * One shared vocabulary for download-stage labels and byte counters,
- * previously copy-pasted between the Add panel and Library cards.
+ * Shared vocabulary for download-stage labels and byte counters,
+ * used by the Add panel and Library cards.
  */
 
 fun downloadStageLabel(stage: String): String = when (stage) {

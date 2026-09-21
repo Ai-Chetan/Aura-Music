@@ -355,8 +355,22 @@ class LibraryViewModel @Inject constructor(
     }
 
     /**
+     * Shuffle the downloads vault: the whole (filtered) list plays in random
+     * order, straight from local files. Radio recommendations still continue
+     * when the shuffled list runs out.
+     */
+    fun shuffleDownloads(songs: List<SongEntity>) {
+        val shuffled = songs.shuffled()
+        if (shuffled.isEmpty()) return
+        upNext.clear()
+        playbackController.playQueue(shuffled, 0)
+        _messages.tryEmit("Shuffling ${shuffled.size} downloads")
+    }
+
+    /**
      * Streaming play for a Saved bookmark: instant start, then the rest of
-     * the Saved list becomes an up-next session filling the live queue.
+     * the Saved list continues in order — with radio recommendations at the
+     * dead end, and engine picks pre-queued while Spice-up is on.
      */
     fun playSaved(
         track: SavedTrackEntity,
@@ -382,7 +396,7 @@ class LibraryViewModel @Inject constructor(
                 val transient = transients.fromSaved(track)
                 playbackController.playQueue(listOf(transient), 0)
                 val tracks = all.asTracks()
-                upNext.startSession(tracks, tracks.indexOfFirst { it.url == track.url })
+                upNext.startPlaylistSession(tracks, tracks.indexOfFirst { it.url == track.url })
                 savedTrackRepository.recordPlay(track.url)
                 onPlaying()
             } catch (e: Exception) {
@@ -392,6 +406,41 @@ class LibraryViewModel @Inject constructor(
             }
         }
     }
+
+    /**
+     * Shuffle the Saved list: a random track starts instantly, the rest of
+     * the shuffled order continues behind it (needs internet to resolve).
+     */
+    fun shuffleSaved(tracks: List<SavedTrackEntity>, onPlaying: () -> Unit = {}) {
+        val shuffled = tracks.shuffled()
+        if (shuffled.isEmpty()) return
+        if (!gate.runIfAllowed(action = {
+                viewModelScope.launch {
+                    _savedResolvingUrl.value = shuffled.first().url
+                    try {
+                        val first = transients.fromSaved(shuffled.first())
+                        playbackController.playQueue(listOf(first), 0)
+                        upNext.startPlaylistSession(shuffled.asTracks(), 0)
+                        savedTrackRepository.recordPlay(shuffled.first().url)
+                        _messages.emit("Shuffling ${shuffled.size} saved tracks")
+                        onPlaying()
+                    } catch (e: Exception) {
+                        _messages.emit("Couldn't stream: ${e.message ?: "unknown error"}")
+                    } finally {
+                        _savedResolvingUrl.value = null
+                    }
+                }
+            })) {
+            viewModelScope.launch {
+                _messages.emit(gate.snapshot().reason?.message() ?: "Couldn't stream.")
+            }
+        }
+    }
+
+    /** Spice-up switch state (auto recommended queue top-ups). */
+    val spiceUp: StateFlow<Boolean> = upNext.spiceUp
+
+    fun toggleSpiceUp() = upNext.toggleSpiceUp()
 
     /** Warm the stream cache for Saved rows as the tab appears. */
     fun prefetchSaved(urls: List<String>) {

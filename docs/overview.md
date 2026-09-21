@@ -53,14 +53,20 @@ Anyone who wants a private, on-device music vault on Android: paste links, curat
 | 16 | Library sort modes | Recent/oldest, title A–Z/Z–A, artist A–Z, longest/shortest; auto-scrolls to top |
 | 17 | Live download queue | Collapsible overall-% card, per-song progress, cancel, starter-batch error report with retry |
 | 18 | Navigation-proof playlist imports | Whole-playlist WorkManager import with live Library progress |
+| 19 | Saved streaming bookmarks | Save without downloading; instant stream play, full tag/filter/sort tooling in the Saved tab |
+| 20 | Home hub | Continue listening (downloads + Saved merged), top hits today, For You from your rotation |
+| 21 | Recommendation engine | On-device taste model: replays, obsessions, skip/artist signals → ranked radio picks |
+| 22 | Infinite radio | Top-hits/For-You/search taps start radio; playlists continue with recommendations at their dead end — playback never terminates |
+| 23 | Library playlist controls | Shuffle play (filter-aware) + Spice-up switch pre-queueing engine picks |
+| 24 | Swipeable mini player | Follow-the-finger drag with tilt, skip hints, fly-out page-turn animation |
 
-> **Note:** screenshots in `README.md` and `docs/screenshots/` predate the current UI (new Library, Add section, onboarding). Refreshed shots are on the way.
+Current screenshots live in `docs/screenshots/` and are shown in `README.md`.
 
 ## 6. Later milestones
 
 - Playback speed control, sleep timer, crossfade/gapless tuning
 - Smart/dynamic playlists from tag combinations
-- Recently played / most played stats views
+- Most-played stats / listening dashboard views
 - Home-screen widget, waveform seek bar, volume normalization
 - Android Auto, batch tag editing, duplicate detection, lyrics, themes, equalizer, M3U import/export
 

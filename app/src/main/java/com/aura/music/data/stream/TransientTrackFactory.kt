@@ -9,8 +9,8 @@ import javax.inject.Singleton
 
 /**
  * Builds transient (streaming, never saved) queue entries from bookmarks.
- * One shared implementation so Discover / Home / Search / Saved all produce
- * identical playable items — previously four copy-pasted blocks.
+ * Single shared implementation so Discover, Home, Search, and Saved all
+ * produce identical playable items.
  */
 @Singleton
 class TransientTrackFactory @Inject constructor(

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
@@ -33,10 +34,12 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,8 +58,13 @@ import com.aura.music.ui.components.ShimmerList
 import com.aura.music.ui.components.StreamRow
 import com.aura.music.ui.components.collectToast
 import com.aura.music.ui.theme.AuraSpacing
+import com.aura.music.ui.tour.LocalTour
+import com.aura.music.ui.tour.TourActions
+import com.aura.music.ui.tour.TourAnchors
+import com.aura.music.ui.tour.tourAnchor
 import com.aura.music.util.formatDuration
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * Home hub — the launch screen. Order is deliberate:
@@ -83,6 +91,29 @@ fun HomeScreen(
 
     val dynamicEmpty = state.trending.isEmpty() && state.forYou.isEmpty()
 
+    // The guided tour scrolls this list to reach off-screen sections
+    // ("For you" lives below the fold); actions registered here run in
+    // Home's scope so the animation survives step changes.
+    val tour = LocalTour.current
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    DisposableEffect(tour) {
+        tour.registerAction(TourActions.HOME_SCROLL_TOP) {
+            scope.launch { listState.animateScrollToItem(0) }
+        }
+        tour.registerAction(TourActions.HOME_SCROLL_BOTTOM) {
+            scope.launch {
+                val target = (listState.layoutInfo.totalItemsCount - 2)
+                    .coerceAtLeast(0)
+                listState.animateScrollToItem(target)
+            }
+        }
+        onDispose {
+            tour.unregisterAction(TourActions.HOME_SCROLL_TOP)
+            tour.unregisterAction(TourActions.HOME_SCROLL_BOTTOM)
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         AmbientBackground()
         Scaffold(
@@ -98,6 +129,7 @@ fun HomeScreen(
                     .padding(innerPadding)
             ) {
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(bottom = AuraSpacing.BottomListPadding)
                 ) {
@@ -111,7 +143,8 @@ fun HomeScreen(
                         SectionHeader(
                             title = "Continue listening",
                             actionLabel = "Library",
-                            onAction = onOpenLibrary
+                            onAction = onOpenLibrary,
+                            modifier = Modifier.tourAnchor(TourAnchors.HOME_CONTINUE)
                         )
                         Spacer(modifier = Modifier.height(AuraSpacing.Xs))
                     }
@@ -122,15 +155,15 @@ fun HomeScreen(
                         ) {
                             itemsIndexed(
                                 items = recent,
-                                key = { _, song -> song.id },
+                                key = { _, item -> "continue-${item.id}" },
                                 contentType = { _, _ -> "rail" }
-                            ) { index, song ->
+                            ) { _, item ->
                                 RailCard(
-                                    title = song.title,
-                                    subtitle = song.artist ?: "Unknown",
-                                    thumbnailUrl = song.thumbnailPath,
+                                    title = item.title,
+                                    subtitle = item.artist ?: "Unknown",
+                                    thumbnailUrl = item.art,
                                     onClick = {
-                                        viewModel.playRecent(recent, index, onPlayStarted)
+                                        viewModel.playContinue(item, onPlayStarted)
                                     }
                                 )
                             }
@@ -145,7 +178,8 @@ fun HomeScreen(
                     item(key = "hits-title") {
                         SectionHeader(
                             title = "Top hits today",
-                            subtitle = "The most significant drops right now"
+                            subtitle = "The most significant drops right now",
+                            modifier = Modifier.tourAnchor(TourAnchors.HOME_HITS)
                         )
                         Spacer(modifier = Modifier.height(AuraSpacing.Xs))
                     }
@@ -197,7 +231,7 @@ fun HomeScreen(
                                     thumbnailUrl = hero.thumbnailUrl,
                                     badge = "#1 TODAY",
                                     isResolving = state.resolvingUrl == hero.url,
-                                    onPlay = { viewModel.playStream(hero, state.trending, onPlayStarted) }
+                                    onPlay = { viewModel.playStream(hero, onPlayStarted) }
                                 )
                                 Spacer(modifier = Modifier.height(AuraSpacing.Xs))
                             }
@@ -218,7 +252,7 @@ fun HomeScreen(
                                     if (track.durationMs > 0) track.durationMs.formatDuration() else null
                                 ).joinToString(" • ").ifEmpty { "YouTube" },
                                 thumbnailUrl = track.thumbnailUrl,
-                                onPlay = { viewModel.playStream(track, state.trending, onPlayStarted) },
+                                onPlay = { viewModel.playStream(track, onPlayStarted) },
                                 rank = rank,
                                 rankAccent = rank <= 3,
                                 isResolving = state.resolvingUrl == track.url,
@@ -226,7 +260,12 @@ fun HomeScreen(
                                     HitMenu(
                                         isSaved = saved,
                                         isQueued = track.url in queuedDownloads,
-                                        onPlay = { viewModel.playStream(track, state.trending, onPlayStarted) },
+                                        // The tour points at the first hit row's
+                                        // menu when explaining play/download/save.
+                                        modifier = if (rank == 2) {
+                                            Modifier.tourAnchor(TourAnchors.HOME_HIT_MENU)
+                                        } else Modifier,
+                                        onPlay = { viewModel.playStream(track, onPlayStarted) },
                                         onToggleSave = { viewModel.toggleSave(track) },
                                         onDownload = { viewModel.download(track) },
                                         onQueue = { viewModel.queueTrack(track) },
@@ -243,7 +282,8 @@ fun HomeScreen(
                         Spacer(modifier = Modifier.height(AuraSpacing.Md))
                         SectionHeader(
                             title = "For you",
-                            subtitle = state.forYouSubtitle.ifBlank { null }
+                            subtitle = state.forYouSubtitle.ifBlank { null },
+                            modifier = Modifier.tourAnchor(TourAnchors.HOME_FOR_YOU)
                         )
                         Spacer(modifier = Modifier.height(AuraSpacing.Xs))
                     }
@@ -261,7 +301,7 @@ fun HomeScreen(
                                     title = track.title,
                                     subtitle = track.artist ?: "YouTube",
                                     thumbnailUrl = track.thumbnailUrl,
-                                    onClick = { viewModel.playStream(track, state.forYou, onPlayStarted) }
+                                    onClick = { viewModel.playStream(track, onPlayStarted) }
                                 )
                             }
                         }
@@ -282,10 +322,11 @@ private fun HitMenu(
     onToggleSave: () -> Unit,
     onDownload: () -> Unit,
     onQueue: () -> Unit,
-    onPlayNext: () -> Unit
+    onPlayNext: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
-    Box {
+    Box(modifier = modifier) {
         IconButton(onClick = { expanded = true }) {
             Icon(
                 imageVector = Icons.Default.MoreVert,
@@ -316,16 +357,6 @@ private fun HitMenu(
                     )
                 },
                 enabled = !isQueued,
-                onClick = {
-                    expanded = false
-                    onDownload()
-                }
-            )
-            DropdownMenuItem(
-                text = { Text("Download offline") },
-                leadingIcon = {
-                    Icon(imageVector = Icons.Default.CloudDownload, contentDescription = null)
-                },
                 onClick = {
                     expanded = false
                     onDownload()

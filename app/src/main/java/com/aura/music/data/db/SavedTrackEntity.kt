@@ -24,5 +24,7 @@ data class SavedTrackEntity(
     val durationMs: Long,
     val dateSaved: Long,
     val playCount: Int = 0,
-    val lastPlayedAt: Long? = null
+    val lastPlayedAt: Long? = null,
+    /** Skipped before meaningfully played — the recommendation engine's negative signal. */
+    val skipCount: Int = 0
 )

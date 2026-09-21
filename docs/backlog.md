@@ -14,7 +14,7 @@
 - Local search (title/artist)
 - YouTube Music search with instant streaming or save-to-vault
 - Combined Add section (Search + Paste link under one toggle)
-- Skippable Getting Started guide with coach tips + starter-track batch downloads
+- Guided tour over the live UI (replaces the old coach pages; auto-starts on first launch, replayable from Settings → Help, finish panel with search + starter-track batch downloads)
 - Library sort modes (recent/oldest/title/artist/duration) with snap-to-top + batched rendering
 - Live download queue (collapsible overall-% card, per-song progress, cancel, starter-batch failure report with retry)
 - YouTube throttling hardening (concurrency gate, backoff retries, staggered batches, friendly errors)
@@ -22,6 +22,13 @@
 - Custom futuristic UI theme (ambient background, reactive waveform, glass cards, chips, badges)
 - Library backup/export + import (JSON, tag-exclusion or explicit selection, tag merge on restore)
 - Most/recently-played tracking (`playCount` / `lastPlayedAt` collected in DB)
+- Saved streaming bookmarks (metadata-only, unique URL, tags, instant stream play via pre-warmed URLs + ExoPlayer disk cache)
+- Home hub: continue listening (merges recently played downloads + Saved), today's top hits hero + rows, For You rail
+- On-device recommendation engine: recency-weighted taste score over vault/Saved/streamed plays, skip tracking (per track + per artist), obsession seeds, related-graph expansion, artist affinity
+- Infinite radio playback: Top-hits/For-You/search taps become radio sessions (never the tapped list in order); playlists continue with radio at their dead end; every track change re-arms pick discovery
+- Library playlist controls: Shuffle play (both tabs, filter-aware) + Spice-up switch that pre-queues engine picks behind the playing playlist
+- Swipeable mini player card: card follows the finger with tilt, edge skip hints, fly-out + slide-in page-turn transition
+- Data-usage gate (`NetworkGate`) gating all streaming actions by user preference
 
 ## Should-have (next)
 
@@ -29,8 +36,8 @@
 - Sleep timer
 - Crossfade between tracks
 - Gapless playback tuning
-- Smart/dynamic playlists from tag combinations (schema already supports `isSmart`)
-- Recently played / most played views (data already collected — needs UI)
+- Smart/dynamic playlists from tag combinations
+- Most played stats views / listening dashboard (recently played already powers the continue-listening rail)
 - Home-screen widget (mini player)
 - Waveform-style seek bar
 - Volume normalization on import
@@ -57,5 +64,5 @@
 
 - Voice-based tagging via on-device speech recognition
 - Automatic mood/genre tag suggestion from audio analysis
-- Per-tag custom sort order / radio-style endless shuffle
+- Per-tag custom sort order
 - Listening streak / stats dashboard

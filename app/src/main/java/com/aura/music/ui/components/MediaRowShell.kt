@@ -115,12 +115,29 @@ fun MediaRowShell(
                 // between the artist line and the next song.
                 Spacer(modifier = Modifier.height(AuraSpacing.Sm))
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    tags.take(3).forEach { tag ->
+                    // One line, always: each chip may use at most its fair
+                    // share of the width (long names ellipsize instead of
+                    // wrapping the row taller), the rest collapse into +N.
+                    val maxChips = 3
+                    val overflow = tags.size - maxChips
+                    tags.take(maxChips).forEach { tag ->
                         TagChip(
                             name = tag.name,
                             colorHex = tag.colorHex,
+                            selected = false,
+                            onClick = {},
+                            enabled = false,
+                            singleLine = true,
+                            modifier = Modifier.weight(1f, fill = false)
+                        )
+                    }
+                    if (overflow > 0) {
+                        TagChip(
+                            name = "+$overflow",
+                            colorHex = null,
                             selected = false,
                             onClick = {},
                             enabled = false

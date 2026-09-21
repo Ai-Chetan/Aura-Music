@@ -34,7 +34,7 @@ Everything runs on-device. No backend server, no cloud database.
 | Playback engine | **Media3 (ExoPlayer + media3-session)** | Gapless playback, `MediaSession` integration powering notification + lock-screen panel |
 | Background service | `MediaSessionService` (Media3) | Keeps playback alive when backgrounded |
 | Stream extraction | **NewPipeExtractor** (`com.github.TeamNewPipe:NewPipeExtractor`) | Actively maintained extractor library; resolves direct audio stream URLs from YouTube on-device, no API key |
-| Local database | Room (SQLite) | Songs, tags, playlists, play history — relational, Flow/Compose-friendly |
+| Local database | Room (SQLite) | Songs, tags, saved bookmarks, play/skip stats, queue state — relational, Flow/Compose-friendly |
 | Async/background jobs | Kotlin Coroutines + Flow | Standard, integrates with Room and Compose |
 | Download queue | WorkManager | Reliable background downloads that survive app kill/reboot |
 | Dependency injection | Hilt | ViewModels / repositories / playback wiring |
@@ -73,35 +73,46 @@ app/src/main/java/com/aura/music/
 ├─ AuraApp.kt / MainActivity.kt
 ├─ ui/
 │   ├─ theme/           (colors, typography, Material3 color scheme, tokens)
-│   ├─ library/         (song list, tag filter chips, search, sort, download queue)
+│   ├─ home/            (continue listening, top hits, For You rails)
+│   ├─ library/         (song list, tag filter chips, search, sort, download queue,
+│   │                    shuffle + spice-up controls, Saved tab)
 │   ├─ player/          (now-playing screen + queue sheet)
 │   ├─ add/             (combined Search / Paste-link section)
 │   ├─ addsong/         (paste-link panel: preview, single + playlist progress)
-│   ├─ search/          (YouTube Music search panel: stream or save)
-│   ├─ onboarding/      (first-launch guide + starter tracks)
+│   ├─ search/          (YouTube Music search panel hosted by Add: stream or save)
+│   ├─ tour/            (guided tour over the live UI: anchors, overlay, steps)
+│   ├─ onboarding/      (starter tracks + view model backing the tour finish panel)
 │   ├─ songdetail/      (song page, tag editor)
 │   ├─ backup/          (JSON export/import UI)
+│   ├─ settings/        (data-usage gate and app preferences)
 │   ├─ navigation/      (NavHost, bottom tabs, MiniPlayer shell)
 │   └─ components/      (AlbumArt, AmbientBackground, AudioReactiveWaveform,
-│                        GlassCard, MiniPlayer, QualityBadge, SongRow, TagChip,
-│                        splash, shared chrome)
+│                        GlassCard, MiniPlayer (swipeable), QualityBadge, SongRow,
+│                        MediaRowShell, Sections (rails/hero), TagChip, splash,
+│                        shared chrome)
 ├─ domain/
-│   └─ repository/      (SongRepository, TagRepository, ExtractionRepository interfaces)
+│   └─ repository/      (SongRepository, TagRepository, SavedTrackRepository,
+│                        ExtractionRepository interfaces)
 ├─ data/
-│   ├─ db/              (Room entities, DAOs, AppDatabase v2 + migration)
+│   ├─ db/              (Room entities, DAOs, AppDatabase v8 + migrations)
 │   ├─ extraction/      (NewPipe wrapper, OkHttp downloader shim, YtGate + ytRetry)
 │   ├─ download/        (DownloadAudioWorker, PlaylistImportWorker, SongFileDownloader)
+│   ├─ stream/          (StreamResolver + cache, TransientTrackFactory, UpNextManager —
+│   │                    the "what plays next" session brain)
+│   ├─ recommendations/ (RecommendationEngine, RecommendationsRepository,
+│   │                    ListenStatsStore, TrackDedup)
+│   ├─ network/         (NetworkGate / ConnectivityMonitor — data-usage gate)
 │   ├─ repository/      (repository implementations)
 │   ├─ backup/          (LibraryBackup JSON codec)
-│   ├─ prefs/           (DataStore onboarding flag)
+│   ├─ prefs/           (DataStore: onboarding, playback [spice-up], data usage)
 │   └─ DefaultTagSeeder.kt (starter tags on first launch)
 ├─ playback/
-│   ├─ PlaybackService.kt            (MediaSessionService + ExoPlayer)
+│   ├─ PlaybackService.kt            (MediaSessionService + ExoPlayer + play counts)
 │   ├─ PlaybackController.kt         (interface + PlaybackUiState)
-│   ├─ Media3PlaybackController.kt   (MediaController wrapper)
+│   ├─ Media3PlaybackController.kt   (MediaController wrapper + skip detection)
 │   └─ AudioVisualizer.kt            (Visualizer → waveform buckets)
 ├─ di/                  (Hilt: database, network, repository, playback modules)
-└─ util/                (YoutubeUrls, TimeFormatter)
+└─ util/                (YoutubeUrls, TimeFormatter, DownloadFormat)
 ```
 
 ## 6. Permissions
@@ -120,10 +131,39 @@ app/src/main/java/com/aura/music/
 - Frosted-glass cards (`GlassCard`), pill-shaped per-tag color chips (`TagChip`), quality badges (`HQ • BEST` amber / `HQ` green).
 - Design tokens live in `ui/theme/` — reuse them instead of hardcoding values per screen.
 
-## 8. Data flow example: "play a filtered set of tagged songs on shuffle"
+## 8. Recommendation & radio engine ("what plays next")
+
+Every queue in the app is kept alive by `UpNextManager` (`data/stream/`), which manages two session kinds:
+
+| Session kind | Started by | Behaviour |
+|---|---|---|
+| **Playlist** | Saved / Downloads / continue-listening taps, Library shuffle | The list continues in order behind the tapped track. At the dead end, radio recommendations take over — a playlist never terminates. The Library **Spice up** switch pre-queues engine picks (playlist order always wins first). |
+| **Radio** | Top-hits / For-You / search taps | The tapped track plays; *everything after it* is generated by the engine — never "the next row of the list". |
+
+A session-less vault queue behaves like radio at its tail (repeat modes still loop natively; radio only engages on repeat OFF). Whenever the engine finds nothing, every track change re-arms the search — a new current track means a new related graph, so "exhausted" is never final.
+
+`RecommendationEngine` (`data/recommendations/`) is the taste model, entirely on-device:
+
+1. **Signals.** Plays and replays (`playCount`/`lastPlayedAt` in Room for vault + Saved; `ListenStatsStore` DataStore for transient streams with no DB row) and **skips** (`skipCount` columns + per-artist/per-URL stats). `Media3PlaybackController` detects skips on every `SEEK` track transition: leaving a song under 70% played (and 15s+ short; under 2 min when duration is unknown) counts as a skip — for the track itself and for its artist.
+2. **Obsession seeds.** Everything known is scored: recency-weighted with a ~2-day half-life, scaled by play frequency, divided by a skip factor. Top seeds + the currently playing track become radio seeds.
+3. **Expansion.** The related-tracks graph of the current track (strongest weight) and of the top seeds is fetched in parallel, network-gated, through the shared extraction layer.
+4. **Candidates.** Discovery picks are scored by graph proximity + artist affinity (replayed artists get a bonus, skip-heavy artists are nearly silenced) + jitter for variety; high-scoring owned songs compete as replays (vault picks append straight from the local file — offline, no resolve step). Anything queued, recently radio-played, or already owned as a stream duplicate is excluded (`TrackDedup` normalizes upload-type noise).
+5. **Fallbacks.** Cached For-You / trending pools keep radio alive when the network misbehaves.
+
+`NetworkGate` (`data/network/`) gates every streaming action (radio included) behind the user's data-usage preferences; vault replays and offline playback are never gated.
+
+## 9. Data flow example: "play a filtered set of tagged songs on shuffle"
 
 1. UI: user selects tags `sad` + `english`, toggles shuffle on.
 2. `LibraryViewModel` queries Room for songs matching both tags.
 3. `Media3PlaybackController.playQueue()` builds `MediaItem`s (`localFilePath` → URI, title/artist/artwork metadata).
 4. `ExoPlayer.shuffleModeEnabled = true`; Media3 handles shuffle order internally.
 5. `MediaSession` updates the system notification and lock screen automatically.
+6. When the shuffled list runs dry on repeat OFF, `UpNextManager` keeps radio going with engine picks (vault replays append as local files, streams resolve on demand).
+
+## 10. Data flow example: "tap a search result"
+
+1. UI resolves the tapped track to a transient queue entry and starts it instantly.
+2. `UpNextManager.startRadio()` marks the session as radio — the rest of the search results are *not* queued.
+3. On every tail, the engine appends one ranked pick (related graph of what's playing → obsession seeds → cached pools).
+4. Skips and plays feed straight back into `ListenStatsStore` / Room, so the next pick already reflects the tap you just made.

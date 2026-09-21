@@ -30,6 +30,9 @@ interface SongDao {
     @Query("UPDATE songs SET playCount = playCount + 1, lastPlayedAt = :now WHERE id = :songId")
     suspend fun incrementPlayCount(songId: Long, now: Long)
 
+    @Query("UPDATE songs SET skipCount = skipCount + 1 WHERE id = :songId")
+    suspend fun incrementSkipCount(songId: Long)
+
     @Query("SELECT * FROM songs WHERE lastPlayedAt IS NOT NULL ORDER BY lastPlayedAt DESC LIMIT :limit")
     fun getRecentlyPlayed(limit: Int): Flow<List<SongEntity>>
 

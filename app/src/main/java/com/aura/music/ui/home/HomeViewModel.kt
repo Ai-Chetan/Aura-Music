@@ -2,12 +2,14 @@ package com.aura.music.ui.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.aura.music.data.db.SavedTrackEntity
 import com.aura.music.data.db.SongEntity
 import com.aura.music.data.recommendations.RecommendationsRepository
 import com.aura.music.data.network.GateSnapshot
 import com.aura.music.data.network.NetworkGate
 import com.aura.music.data.stream.TransientTrackFactory
 import com.aura.music.data.stream.UpNextManager
+import com.aura.music.data.stream.asTracks
 import com.aura.music.domain.repository.SavedTrackRepository
 import com.aura.music.domain.repository.SongRepository
 import com.aura.music.domain.repository.YouTubeTrack
@@ -35,6 +37,35 @@ data class HomeUiState(
     /** Watch URL currently resolving into playable audio. */
     val resolvingUrl: String? = null
 )
+
+/**
+ * One "continue listening" tile: either a downloaded vault song or a Saved
+ * streaming bookmark — whichever you played more recently. Playing one
+ * resumes the list it belongs to (its playlist), then radio continues.
+ */
+sealed interface ContinueItem {
+    val id: Long
+    val title: String
+    val artist: String?
+    val art: String?
+    val lastPlayedAt: Long?
+
+    data class Vault(val song: SongEntity) : ContinueItem {
+        override val id get() = song.id
+        override val title get() = song.title
+        override val artist get() = song.artist
+        override val art get() = song.thumbnailPath
+        override val lastPlayedAt get() = song.lastPlayedAt
+    }
+
+    data class Saved(val track: SavedTrackEntity) : ContinueItem {
+        override val id get() = track.id
+        override val title get() = track.title
+        override val artist get() = track.artist
+        override val art get() = track.thumbnailUrl
+        override val lastPlayedAt get() = track.lastPlayedAt
+    }
+}
 
 /**
  * Home hub: your music first (continue listening, vault), then the most
@@ -75,9 +106,18 @@ class HomeViewModel @Inject constructor(
 
     val gateState: StateFlow<GateSnapshot> = gate.state
 
-    val recent: StateFlow<List<SongEntity>> =
-        songRepository.observeRecentlyPlayed(10)
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    /** Recently played across BOTH collections — downloads and Saved — most recent first. */
+    val recent: StateFlow<List<ContinueItem>> = combine(
+        songRepository.observeRecentlyPlayed(10),
+        savedTrackRepository.observeSavedTracks()
+    ) { songs, saved ->
+        (
+            songs.map { ContinueItem.Vault(it) } +
+                saved.filter { it.lastPlayedAt != null }.map { ContinueItem.Saved(it) }
+            )
+            .sortedByDescending { it.lastPlayedAt ?: 0L }
+            .take(10)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 4)
     val messages: SharedFlow<String> = _messages.asSharedFlow()
@@ -108,12 +148,64 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    /** Offline vault playback — never gated; ends any streaming session. */
-    fun playRecent(songs: List<SongEntity>, index: Int, onPlaying: () -> Unit) {
-        if (songs.isEmpty() || index !in songs.indices) return
-        upNext.clear()
-        playbackController.playQueue(songs, index)
-        onPlaying()
+    /**
+     * Continue listening: the tapped song plays immediately, then the rest
+     * of the list it belongs to — the downloads vault for vault songs, the
+     * Saved list for bookmarks. After that list ends, radio continues.
+     */
+    fun playContinue(item: ContinueItem, onPlaying: () -> Unit) {
+        when (item) {
+            is ContinueItem.Vault -> viewModelScope.launch {
+                upNext.clear()
+                val all = try {
+                    songRepository.observeAllSongs().first()
+                        .map { it.song }
+                        .sortedByDescending { it.dateAdded }
+                } catch (_: Exception) {
+                    emptyList()
+                }
+                val index = all.indexOfFirst { it.id == item.song.id }
+                if (index >= 0) {
+                    playbackController.playQueue(all, index)
+                } else {
+                    playbackController.playQueue(listOf(item.song), 0)
+                }
+                onPlaying()
+            }
+            is ContinueItem.Saved -> playSavedStream(item.track, onPlaying)
+        }
+    }
+
+    /** Saved bookmark from the continue rail: stream it, then its Saved list, then radio. */
+    private fun playSavedStream(track: SavedTrackEntity, onPlaying: () -> Unit) {
+        if (_resolvingUrl.value != null) return
+        if (!gate.runIfAllowed(action = { resolveSavedAndPlay(track, onPlaying) })) {
+            viewModelScope.launch {
+                _messages.emit(gate.snapshot().reason?.message() ?: "Couldn't stream.")
+            }
+        }
+    }
+
+    private fun resolveSavedAndPlay(track: SavedTrackEntity, onPlaying: () -> Unit) {
+        playJob?.cancel()
+        playJob = viewModelScope.launch {
+            _resolvingUrl.value = track.url
+            try {
+                val transient = transients.fromSaved(track)
+                playbackController.playQueue(listOf(transient), 0)
+                val tracks = savedTrackRepository.observeSavedTracks().first().asTracks()
+                upNext.startPlaylistSession(
+                    tracks,
+                    tracks.indexOfFirst { it.url == track.url }
+                )
+                savedTrackRepository.recordPlay(track.url)
+                onPlaying()
+            } catch (e: Exception) {
+                _messages.emit("Couldn't stream: ${e.message ?: "unknown error"}")
+            } finally {
+                _resolvingUrl.value = null
+            }
+        }
     }
 
     /** Bookmark toggle for top-hits rows. */
@@ -193,24 +285,28 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    /** Streaming playback — gated like everywhere else. */
-    fun playStream(track: YouTubeTrack, all: List<YouTubeTrack>, onPlaying: () -> Unit) {
+    /**
+     * Streaming playback — gated like everywhere else. Top hits and For-you
+     * taps start radio: the tapped song plays and the engine fills everything
+     * after it, so the next song is never just "the next row in the list".
+     */
+    fun playStream(track: YouTubeTrack, onPlaying: () -> Unit) {
         if (_resolvingUrl.value != null) return
-        if (!gate.runIfAllowed(action = { resolveAndPlay(track, all, onPlaying) })) {
+        if (!gate.runIfAllowed(action = { resolveAndPlay(track, onPlaying) })) {
             viewModelScope.launch {
                 _messages.emit(gate.snapshot().reason?.message() ?: "Couldn't stream.")
             }
         }
     }
 
-    private fun resolveAndPlay(track: YouTubeTrack, all: List<YouTubeTrack>, onPlaying: () -> Unit) {
+    private fun resolveAndPlay(track: YouTubeTrack, onPlaying: () -> Unit) {
         playJob?.cancel()
         playJob = viewModelScope.launch {
             _resolvingUrl.value = track.url
             try {
                 val transient = transients.fromTrack(track)
                 playbackController.playQueue(listOf(transient), 0)
-                upNext.startSession(all, all.indexOfFirst { it.url == track.url })
+                upNext.startRadio()
                 // Streamed taste counts too (no-op unless bookmarked).
                 savedTrackRepository.recordPlay(track.url)
                 onPlaying()

@@ -11,7 +11,9 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.aura.music.data.db.SongDao
 import com.aura.music.data.db.QueueStateDao
+import com.aura.music.data.db.SavedTrackDao
 import com.aura.music.data.db.SongEntity
+import com.aura.music.data.recommendations.ListenStatsStore
 import com.aura.music.data.stream.StreamResolver
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
@@ -36,7 +38,9 @@ class Media3PlaybackController @Inject constructor(
     private val audioVisualizer: AudioVisualizer,
     private val streamResolver: StreamResolver,
     private val songDao: SongDao,
-    private val queueStateDao: QueueStateDao
+    private val queueStateDao: QueueStateDao,
+    private val savedTrackDao: SavedTrackDao,
+    private val listenStats: ListenStatsStore
 ) : PlaybackController {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -67,6 +71,7 @@ class Media3PlaybackController @Inject constructor(
         }
 
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+            recordTransitionStats(reason, mediaItem)
             updateState()
         }
 
@@ -119,6 +124,59 @@ class Media3PlaybackController @Inject constructor(
                 restoreLastSession()
             }
         }, MoreExecutors.directExecutor())
+    }
+
+    /**
+     * Taste tracking on every track change — runs BEFORE [updateState] so
+     * the previous state still describes the outgoing song.
+     *
+     * - **Skips**: a SEEK into a different item while the outgoing song
+     *   hasn't meaningfully played (under 70% of its length and 15s+ short;
+     *   under 2 minutes when the duration is unknown) counts as a skip —
+     *   the DB counter for vault rows, the saved-table counter for Saved
+     *   bookmarks, and artist/URL stats for everything (streams included).
+     *   These are the recommendation engine's negative signal.
+     * - **Plays**: URL/artist stats for the incoming item; vault play counts
+     *   are recorded by [PlaybackService].
+     */
+    private fun recordTransitionStats(reason: Int, mediaItem: MediaItem?) {
+        val prev = _playbackState.value
+        val prevSong = prev.currentSong
+        val incomingId = mediaItem?.mediaId?.toLongOrNull()
+
+        if (prevSong != null && prevSong.id != incomingId &&
+            reason == Player.MEDIA_ITEM_TRANSITION_REASON_SEEK
+        ) {
+            val playedMs = prev.positionMs
+            val skipped = if (prevSong.durationMs > 0) {
+                val limit = (prevSong.durationMs * 0.7).toLong()
+                playedMs in 0 until limit && playedMs < prevSong.durationMs - 15_000
+            } else {
+                playedMs in 0 until 120_000
+            }
+            if (skipped) {
+                scope.launch(Dispatchers.IO) {
+                    try {
+                        if (prevSong.id >= 0) songDao.incrementSkipCount(prevSong.id)
+                        else savedTrackDao.recordSkip(prevSong.sourceUrl)
+                        listenStats.recordSkip(prevSong.sourceUrl, prevSong.title, prevSong.artist)
+                    } catch (_: Exception) {
+                    }
+                }
+            }
+        }
+
+        val playTransition = reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO ||
+            reason == Player.MEDIA_ITEM_TRANSITION_REASON_SEEK
+        val incoming = incomingId?.let { songCache[it] }
+        if (playTransition && incoming != null && incoming.id != prevSong?.id) {
+            scope.launch(Dispatchers.IO) {
+                try {
+                    listenStats.recordPlay(incoming.sourceUrl, incoming.title, incoming.artist)
+                } catch (_: Exception) {
+                }
+            }
+        }
     }
 
     private fun updateState() {

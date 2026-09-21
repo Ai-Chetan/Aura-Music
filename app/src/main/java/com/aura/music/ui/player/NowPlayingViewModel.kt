@@ -3,7 +3,6 @@ package com.aura.music.ui.player
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aura.music.data.db.SongEntity
-import com.aura.music.data.stream.UpNextManager
 import com.aura.music.domain.repository.SavedTrackRepository
 import com.aura.music.domain.repository.SongRepository
 import com.aura.music.domain.repository.YouTubeTrack
@@ -25,8 +24,7 @@ import javax.inject.Inject
 class NowPlayingViewModel @Inject constructor(
     private val playbackController: PlaybackController,
     private val savedTrackRepository: SavedTrackRepository,
-    private val songRepository: SongRepository,
-    private val upNext: UpNextManager
+    private val songRepository: SongRepository
 ) : ViewModel() {
 
     val playbackState: StateFlow<PlaybackUiState> = playbackController.playbackState
@@ -42,11 +40,6 @@ class NowPlayingViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     val waveform: StateFlow<FloatArray> = playbackController.waveform
-
-    /** Spice-up switch state (auto recommended queue top-ups). */
-    val spiceUp: StateFlow<Boolean> = upNext.spiceUp
-
-    fun toggleSpiceUp() = upNext.toggleSpiceUp()
 
     private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 4)
     val messages: SharedFlow<String> = _messages.asSharedFlow()

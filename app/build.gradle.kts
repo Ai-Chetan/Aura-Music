@@ -88,19 +88,19 @@ dependencies {
     implementation("androidx.media3:media3-session:$media3Version")
     implementation("androidx.media3:media3-ui:$media3Version")
 
-    // Room
-    val roomVersion = "2.6.1"
+    // Room (2.7+ supports KSP2 / Kotlin 2.2 metadata)
+    val roomVersion = "2.7.2"
     implementation("androidx.room:room-runtime:$roomVersion")
     implementation("androidx.room:room-ktx:$roomVersion")
     ksp("androidx.room:room-compiler:$roomVersion")
 
-    // Hilt
-    val hiltVersion = "2.53.1"
+    // Hilt (2.56+ supports KSP2 / Kotlin 2.2 metadata)
+    val hiltVersion = "2.56.2"
     implementation("com.google.dagger:hilt-android:$hiltVersion")
     ksp("com.google.dagger:hilt-android-compiler:$hiltVersion")
-    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
-    implementation("androidx.hilt:hilt-work:1.2.0")
-    ksp("androidx.hilt:hilt-compiler:1.2.0")
+    implementation("androidx.hilt:hilt-navigation-compose:1.3.0")
+    implementation("androidx.hilt:hilt-work:1.3.0")
+    ksp("androidx.hilt:hilt-compiler:1.3.0")
 
     // WorkManager
     implementation("androidx.work:work-runtime-ktx:2.10.0")

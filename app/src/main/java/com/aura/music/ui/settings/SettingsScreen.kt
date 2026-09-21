@@ -34,6 +34,8 @@ import com.aura.music.ui.components.AuraSectionTitle
 import com.aura.music.ui.components.AuraTopBar
 import com.aura.music.ui.components.GlassCard
 import com.aura.music.ui.theme.AuraSpacing
+import com.aura.music.ui.tour.TourAnchors
+import com.aura.music.ui.tour.tourAnchor
 
 /**
  * The app's only data preference: everything is fully on by default, on any
@@ -64,9 +66,10 @@ fun SettingsScreen(
                     .verticalScroll(rememberScrollState())
             ) {
                 AuraTopBar(title = "Settings", onBack = { onBack() })
-                Spacer(modifier = Modifier.height(AuraSpacing.Sm))
+                Spacer(modifier = Modifier.height(AuraSpacing.Md))
 
                 AuraSectionTitle(text = "Connection")
+                Spacer(modifier = Modifier.height(AuraSpacing.Xs))
                 GlassCard(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -79,10 +82,12 @@ fun SettingsScreen(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(AuraSpacing.Md))
+                Spacer(modifier = Modifier.height(AuraSpacing.Xl))
                 AuraSectionTitle(text = "Data usage")
+                Spacer(modifier = Modifier.height(AuraSpacing.Xs))
                 GlassCard(
                     modifier = Modifier
+                        .tourAnchor(TourAnchors.SETTINGS_DATA)
                         .fillMaxWidth()
                         .padding(horizontal = AuraSpacing.Md)
                 ) {
@@ -127,10 +132,12 @@ fun SettingsScreen(
                     modifier = Modifier.padding(horizontal = AuraSpacing.Lg)
                 )
 
-                Spacer(modifier = Modifier.height(AuraSpacing.Md))
+                Spacer(modifier = Modifier.height(AuraSpacing.Xl))
                 AuraSectionTitle(text = "Library")
+                Spacer(modifier = Modifier.height(AuraSpacing.Xs))
                 GlassCard(
                     modifier = Modifier
+                        .tourAnchor(TourAnchors.SETTINGS_BACKUP)
                         .fillMaxWidth()
                         .padding(horizontal = AuraSpacing.Md)
                 ) {
@@ -141,16 +148,17 @@ fun SettingsScreen(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(AuraSpacing.Md))
+                Spacer(modifier = Modifier.height(AuraSpacing.Xl))
                 AuraSectionTitle(text = "Help")
+                Spacer(modifier = Modifier.height(AuraSpacing.Xs))
                 GlassCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = AuraSpacing.Md)
                 ) {
                     SettingsRow(
-                        title = "Getting started guide",
-                        subtitle = "Replay the tour and starter tracks.",
+                        title = "Guided tour",
+                        subtitle = "Walk through the app screen by screen.",
                         onClick = onGuideClick
                     )
                 }

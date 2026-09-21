@@ -6,15 +6,15 @@ A private, on-device music player: paste a YouTube link, keep the best-available
 
 ## Screenshots
 
-| Library | Download | Now playing |
+| Library | Add (paste link) | Now playing |
 |---|---|---|
-| ![Library](docs/screenshots/library.png) | ![Download](docs/screenshots/download.png) | ![Now playing](docs/screenshots/now-playing.png) |
+| ![Library](docs/screenshots/08-library-downloaded-tag-filters.png) | ![Add](docs/screenshots/16-add-paste-link-preview.png) | ![Now playing](docs/screenshots/11-now-playing.png) |
 
-| Song detail | Backup | Lock screen |
+| Song details | Backup | Lock screen |
 |---|---|---|
-| ![Song detail](docs/screenshots/song-detail.png) | ![Backup](docs/screenshots/backup.png) | ![Lock screen](docs/screenshots/lock-screen.png) |
+| ![Song details](docs/screenshots/10-song-details-tag-editor.png) | ![Backup](docs/screenshots/06-backup-export-import.png) | ![Lock screen](docs/screenshots/21-lock-screen-media-controls.png) |
 
-> **Note:** these screenshots show an older UI — the app has since been redesigned (new Library, combined Add section, guided onboarding). Updated screenshots are on the way.
+Full set (Home, Library tabs, queue, search, notifications, output switcher): [`docs/screenshots/`](docs/screenshots/).
 
 ## Features
 
@@ -27,7 +27,11 @@ A private, on-device music player: paste a YouTube link, keep the best-available
 - **Throttling-hardened pipeline** — gated YouTube concurrency (max 3), exponential-backoff retries with jitter, staggered batch starts, friendly (non-raw) error messages.
 - **Tag-powered library** — many-to-many tags, AND/OR multi-tag filter, title/artist search, per-song tag editor, starter tags on first launch.
 - **Library sorting** — recently added, oldest, title A–Z/Z–A, artist A–Z, longest/shortest first; changing sort snaps back to the top. Batched rendering keeps large vaults fast.
-- **Real player** — ExoPlayer via Media3 `MediaSessionService`: queue, play-next, reorder, shuffle, repeat off/one/all, background playback, media notification + lock-screen controls. Swipe the Now Playing artwork to change tracks.
+- **Saved streaming bookmarks** — save a track without downloading it; the Saved tab streams it near-instantly (pre-warmed stream URLs + ExoPlayer disk cache) with the same tag/filter/sort tooling as downloads.
+- **Home hub** — continue listening (merges recently played downloads *and* Saved), today's top hits, and For You picks driven by your live rotation.
+- **Recommendation engine & infinite radio** — an on-device taste model learns from plays, replays, and early skips (per track *and* per artist). Top-hits, For-You, and search taps start a radio session where every following song is recommended; Saved/downloads play in order and quietly continue with recommendations at the playlist's dead end. Radio never terminates — every track change re-arms the search for picks.
+- **Playlist controls in Library** — one-tap **Shuffle play** for either tab (respects active filters), and a **Spice up** switch that keeps recommended picks flowing in behind the playing playlist (playlist order always wins first).
+- **Real player** — ExoPlayer via Media3 `MediaSessionService`: queue, play-next, reorder, shuffle, repeat off/one/all, background playback, media notification + lock-screen controls. Swipe the Now Playing artwork to change tracks; swipe the mini player card to skip with a full follow-the-finger fly-out animation.
 - **Animated UI** — Compose + Material 3 with an ambient gradient background (animated on Now Playing only), live audio-reactive waveform, glass cards, tag chips, mini-player shell.
 - **Backup & restore** — versioned JSON export (full / exclude-tags / selected songs) with share sheet, plus validated import that re-downloads and merges tags.
 
@@ -38,7 +42,7 @@ A private, on-device music player: paste a YouTube link, keep the best-available
 | Language / UI | Kotlin, Jetpack Compose + Material 3 |
 | Playback | Media3 (ExoPlayer + MediaSession) |
 | Extraction | NewPipeExtractor (on-device, no API key) |
-| Database | Room (songs, tags, playlists, queue state) |
+| Database | Room (songs, tags, saved bookmarks, play/skip stats, queue state) + DataStore (prefs, listening stats) |
 | Background work | WorkManager + Coroutines/Flow |
 | DI | Hilt |
 | Storage | App-specific external storage (no storage permission needed) |
@@ -65,13 +69,19 @@ No API keys, no backend, no accounts. Everything runs on-device.
 
 ```
 app/src/main/java/com/aura/music/
-├─ ui/          theme, library, player, add (search + paste-link), onboarding,
-│               search, addsong, songdetail, backup, navigation, components
+├─ ui/          theme, home (continue listening / top hits / for you), library,
+│               player, add (search + paste-link), addsong (paste-link panel),
+│               search (search panel hosted by Add), songdetail, backup,
+│               settings, navigation, components, tour (guided tour over the
+│               live UI), onboarding (starter tracks + view model backing
+│               the tour finish panel)
 ├─ domain/      repository interfaces
-├─ data/        Room db, NewPipe extraction (+ politeness gate), WorkManager
-│               download + playlist-import workers, repo impls, backup codec,
-│               onboarding prefs (DataStore)
-├─ playback/    MediaSessionService, MediaController wrapper, audio visualizer
+├─ data/        Room db (v8 + migrations), NewPipe extraction (+ politeness gate),
+│               WorkManager download + playlist-import workers, repo impls,
+│               backup codec, stream/queue session management, recommendation
+│               engine + listening-stats store, network/data gate, prefs (DataStore)
+├─ playback/    MediaSessionService, MediaController wrapper (+ skip detection),
+│               audio visualizer
 ├─ di/          Hilt modules
 └─ util/        YouTube URL handling, time formatting
 ```
@@ -92,7 +102,7 @@ app/src/main/java/com/aura/music/
 
 ## Roadmap
 
-Next up: playback speed, sleep timer, crossfade, smart tag-playlists, most/recently-played views, home-screen widget, refreshed screenshots of the new UI. See [`docs/backlog.md`](docs/backlog.md).
+Next up: playback speed, sleep timer, crossfade, smart tag-playlists, most-played stats views, home-screen widget. See [`docs/backlog.md`](docs/backlog.md).
 
 ## Contributing
 

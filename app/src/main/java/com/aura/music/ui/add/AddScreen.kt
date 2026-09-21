@@ -44,6 +44,8 @@ import com.aura.music.ui.search.SearchPanel
 import com.aura.music.ui.search.SearchViewModel
 import com.aura.music.ui.theme.AuraRadius
 import com.aura.music.ui.theme.AuraSpacing
+import com.aura.music.ui.tour.TourAnchors
+import com.aura.music.ui.tour.tourAnchor
 import com.aura.music.util.YoutubeUrls
 import kotlinx.coroutines.delay
 
@@ -57,6 +59,8 @@ fun AddScreen(
     initialUrl: String? = null,
     /** 0 = Search, 1 = Paste link, null = auto. */
     initialMode: Int? = null,
+    /** Search text to prefill and run immediately (guided tour's finish panel). */
+    initialQuery: String = "",
     onSongAdded: (Long) -> Unit = {},
     onPlaylistDone: () -> Unit = {},
     onPlayResult: () -> Unit = {},
@@ -69,6 +73,15 @@ fun AddScreen(
     var text by rememberSaveable { mutableStateOf(initialUrl.orEmpty()) }
     var linkMode by rememberSaveable {
         mutableStateOf(initialMode?.coerceIn(0, 1) == 1 || !initialUrl.isNullOrBlank())
+    }
+
+    // A prefilled query (tour finish panel) drops straight into results.
+    LaunchedEffect(initialQuery) {
+        if (initialQuery.isNotBlank()) {
+            text = initialQuery
+            searchViewModel.setQuery(initialQuery)
+            searchViewModel.search()
+        }
     }
 
     val toast = collectToast(searchViewModel.messages)
@@ -110,6 +123,7 @@ fun AddScreen(
                 value = text,
                 onValueChange = { text = it },
                 modifier = Modifier
+                    .tourAnchor(TourAnchors.ADD_SEARCH)
                     .fillMaxWidth()
                     .padding(horizontal = AuraSpacing.Md),
                 placeholder = { Text("Song, artist, or paste a link") },
@@ -128,7 +142,8 @@ fun AddScreen(
                                 linkMode = !linkMode
                                 // Flipping to link mode with a URL ready fetches it at once.
                                 if (linkMode && text.trim().isNotEmpty()) submit()
-                            }
+                            },
+                            modifier = Modifier.tourAnchor(TourAnchors.ADD_LINK)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Link,

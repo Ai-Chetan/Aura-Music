@@ -68,6 +68,18 @@ private val MIGRATION_6_7 = object : Migration(6, 7) {
         )
     }
 }
+
+/**
+ * v7 → v8: skip counters on both vault songs and saved bookmarks. The
+ * recommendation engine weighs them as the negative taste signal — tracks
+ * (and artists) that get skipped early surface less in radio picks.
+ */
+private val MIGRATION_7_8 = object : Migration(7, 8) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE songs ADD COLUMN skipCount INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE saved_tracks ADD COLUMN skipCount INTEGER NOT NULL DEFAULT 0")
+    }
+}
 /**
  * v5 → v6: drops the never-shipped playlists tables (no UI ever used them).
  */
@@ -125,7 +137,7 @@ object DatabaseModule {
             AppDatabase::class.java,
             AppDatabase.DATABASE_NAME
         )
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
             // Destructive ONLY on downgrade: every upgrade path has an explicit
             // migration, so a released vault is never wiped by an update.
             .fallbackToDestructiveMigrationOnDowngrade()

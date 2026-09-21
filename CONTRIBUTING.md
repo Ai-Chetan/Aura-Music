@@ -19,9 +19,11 @@ Aura is a **personal-use** music vault. PRs adding any of the following will be 
 ## Code guidelines
 
 - Keep all stream-extraction calls behind `ExtractionRepository` (single module to swap when YouTube changes things).
+- All "what plays next" logic lives in `UpNextManager` + `RecommendationEngine` (`data/stream/`, `data/recommendations/`) — screens start sessions, they never build queues themselves. All taste signals stay on-device.
 - Reuse the design tokens in `ui/theme/` — no hardcoded colors/spacing per screen.
 - Keep comments self-describing and public-facing (no references to private/internal code).
 - Match the existing architecture: `ui/` → `domain/repository` interfaces → `data/` implementations → `playback/` → `di/`.
+- Schema changes need an explicit Room migration in `DatabaseModule` (never rely on the destructive fallback — it only covers downgrades).
 
 ## Pull requests
 

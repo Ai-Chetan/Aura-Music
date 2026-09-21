@@ -14,6 +14,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.aura.music.ui.theme.TagColors
 
@@ -28,7 +29,9 @@ fun TagChip(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     /** False for read-only display chips (no tap handling, no button role). */
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    /** Clamp to one line with an ellipsis — for chips squeezed into a fixed row. */
+    singleLine: Boolean = false
 ) {
     val baseColor = parseTagColor(TagColors.displayFor(name, colorHex))
     val containerColor = if (selected) baseColor else baseColor.copy(alpha = 0.12f)
@@ -38,6 +41,8 @@ fun TagChip(
         text = name,
         color = contentColor,
         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+        maxLines = if (singleLine) 1 else Int.MAX_VALUE,
+        overflow = if (singleLine) TextOverflow.Ellipsis else TextOverflow.Clip,
         modifier = modifier
             .clip(chipShape)
             .background(containerColor)

@@ -12,7 +12,7 @@ import androidx.room.RoomDatabase
         SavedTrackEntity::class,
         SavedTrackTagCrossRef::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

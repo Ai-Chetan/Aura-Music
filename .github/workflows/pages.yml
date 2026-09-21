@@ -28,12 +28,12 @@ jobs:
       - name: Bundle screenshots into site
         run: |
           mkdir -p site/screenshots
-          cp docs/screenshots/library.png site/screenshots/ 2>/dev/null || echo "missing library.png"
-          cp docs/screenshots/download.png site/screenshots/ 2>/dev/null || echo "missing download.png"
-          cp docs/screenshots/now-playing.png site/screenshots/ 2>/dev/null || echo "missing now-playing.png"
-          cp docs/screenshots/song-detail.png site/screenshots/ 2>/dev/null || echo "missing song-detail.png"
-          cp docs/screenshots/backup.png site/screenshots/ 2>/dev/null || echo "missing backup.png"
-          cp docs/screenshots/lock-screen.png site/screenshots/ 2>/dev/null || echo "missing lock-screen.png"
+          for f in docs/screenshots/*.png; do
+            case "$f" in
+              *corrupted-needs-retake*) echo "skip $f (needs retake)" ;;
+              *) cp "$f" site/screenshots/ ;;
+            esac
+          done
           ls -la site site/screenshots
 
       - name: Setup Pages

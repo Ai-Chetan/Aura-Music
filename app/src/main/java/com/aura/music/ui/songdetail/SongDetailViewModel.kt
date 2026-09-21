@@ -73,7 +73,7 @@ class SongDetailViewModel @Inject constructor(
         }
     }
 
-    /** Plays this song as a fresh queue (song detail previously was a dead end). */
+    /** Plays this song as a fresh single-track queue. */
     fun playSong() {
         val current = song.value ?: return
         playbackController.playQueue(listOf(current), 0)

@@ -39,4 +39,7 @@ interface SavedTrackDao {
             "WHERE url = :url"
     )
     suspend fun recordPlay(url: String, now: Long)
+
+    @Query("UPDATE saved_tracks SET skipCount = skipCount + 1 WHERE url = :url")
+    suspend fun recordSkip(url: String)
 }

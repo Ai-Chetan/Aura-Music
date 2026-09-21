@@ -65,6 +65,8 @@ import com.aura.music.ui.components.GlassCard
 import com.aura.music.ui.components.TagChip
 import com.aura.music.ui.theme.AuraRadius
 import com.aura.music.ui.theme.AuraSpacing
+import com.aura.music.ui.tour.TourAnchors
+import com.aura.music.ui.tour.tourAnchor
 
 @Composable
 fun BackupScreen(
@@ -144,6 +146,7 @@ fun BackupScreen(
             // ---------- Export ----------
             GlassCard(
                 modifier = Modifier
+                    .tourAnchor(TourAnchors.BACKUP_EXPORT)
                     .fillMaxWidth()
                     .padding(horizontal = AuraSpacing.Md)
                     .animateContentSize()
