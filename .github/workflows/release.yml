@@ -50,24 +50,28 @@ jobs:
       - name: Assemble debug APK (provides debug keystore fallback)
         run: ./gradlew assembleDebug --stacktrace
 
-      - name: Sign APK with release key
-        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
+      # NOTE: `secrets` must never appear in an `if:` condition — GitHub does
+      # not allow the secrets context there and the whole run dies with
+      # "No jobs were run". Branch on the (possibly empty) env var in shell.
+      - name: Sign APK (release key when secrets exist, else debug key)
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          echo "$KEYSTORE_BASE64" | base64 --decode > /tmp/aura-release.keystore
           APKSIGNER=$(echo $ANDROID_HOME/build-tools/*/apksigner | tr ' ' '\n' | sort -V | tail -1)
-          "$APKSIGNER" sign --ks /tmp/aura-release.keystore --ks-pass "env:KEYSTORE_PASSWORD" --ks-key-alias "$KEY_ALIAS" --key-pass "env:KEY_PASSWORD" --out app/build/outputs/apk/release/app-release-signed.apk app/build/outputs/apk/release/app-release-unsigned.apk
-          rm /tmp/aura-release.keystore
-
-      - name: Sign APK with debug key (fallback when release secrets are missing)
-        if: ${{ secrets.KEYSTORE_BASE64 == '' }}
-        run: |
-          APKSIGNER=$(echo $ANDROID_HOME/build-tools/*/apksigner | tr ' ' '\n' | sort -V | tail -1)
-          "$APKSIGNER" sign --ks ~/.android/debug.keystore --ks-pass pass:android --out app/build/outputs/apk/release/app-release-signed.apk app/build/outputs/apk/release/app-release-unsigned.apk
+          UNSIGNED=app/build/outputs/apk/release/app-release-unsigned.apk
+          SIGNED=app/build/outputs/apk/release/app-release-signed.apk
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 --decode > /tmp/aura-release.keystore
+            "$APKSIGNER" sign --ks /tmp/aura-release.keystore --ks-pass "env:KEYSTORE_PASSWORD" --ks-key-alias "$KEY_ALIAS" --key-pass "env:KEY_PASSWORD" --out "$SIGNED" "$UNSIGNED"
+            rm /tmp/aura-release.keystore
+            echo "Signed with release key."
+          else
+            "$APKSIGNER" sign --ks ~/.android/debug.keystore --ks-pass pass:android --out "$SIGNED" "$UNSIGNED"
+            echo "Release secrets missing — signed with throwaway debug key."
+          fi
 
       - name: Rename APK with tag
         run: cp app/build/outputs/apk/release/app-release-signed.apk "Aura Music-${RELEASE_TAG}.apk"
