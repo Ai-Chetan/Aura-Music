@@ -1,5 +1,7 @@
 # Contributing to Aura
 
+Aura is open source (MIT) and **contributors are welcome** — code, docs, design, and bug reports all count.
+
 Thanks for stopping by. Issues and pull requests are welcome.
 
 ## Setup
@@ -10,7 +12,7 @@ Thanks for stopping by. Issues and pull requests are welcome.
 
 ## Scope (please respect this)
 
-Aura is a **personal-use** music vault. PRs adding any of the following will be declined:
+Aura is a **personal-use** music vault. Aura owns no songs — all rights stay with their respective artists, labels, and rights holders. PRs adding any of the following will be declined:
 
 - Sharing, uploading, or bulk-export/redistribution of downloaded audio
 - Analytics, ads, telemetry, or extra network calls beyond extraction/metadata/artwork

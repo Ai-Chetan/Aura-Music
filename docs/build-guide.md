@@ -1,5 +1,7 @@
 # Build Guide
 
+> Aura is open source (MIT) — contributors are welcome. If you extend a phase below, please update the docs and open a PR (see `../CONTRIBUTING.md`).
+
 How Aura was built — and how to extend it. Each phase builds on the previous one; the checklist at the end of every phase is the definition of done.
 
 > Read `overview.md`, `architecture.md`, and `data-model.md` first. This guide assumes the core decisions (Kotlin, Compose, Media3, Room, NewPipeExtractor, Hilt, WorkManager) are fixed.

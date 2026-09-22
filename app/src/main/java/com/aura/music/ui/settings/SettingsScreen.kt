@@ -162,6 +162,33 @@ fun SettingsScreen(
                         onClick = onGuideClick
                     )
                 }
+
+                Spacer(modifier = Modifier.height(AuraSpacing.Xl))
+                AuraSectionTitle(text = "About")
+                Spacer(modifier = Modifier.height(AuraSpacing.Xs))
+                GlassCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = AuraSpacing.Md)
+                ) {
+                    Column(modifier = Modifier.padding(horizontal = AuraSpacing.Md, vertical = AuraSpacing.Sm)) {
+                        Text(
+                            text = "Aura — developed by Ai-Chetan for the open-source community.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Aura owns no songs and claims no rights over them. " +
+                                "All music, artwork and trademarks belong to their " +
+                                "respective artists, labels and rights holders. " +
+                                "Private listening only — please keep content you own " +
+                                "or have permission to store.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.height(AuraSpacing.Xxl))
             }
         }

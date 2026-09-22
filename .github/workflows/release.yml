@@ -37,10 +37,10 @@ jobs:
         run: ./gradlew assembleRelease --stacktrace
 
       - name: Rename APK with tag
-        run: cp app/build/outputs/apk/release/app-release-unsigned.apk "Aura-${{ github.ref_name }}.apk"
+        run: cp app/build/outputs/apk/release/app-release-unsigned.apk "Aura Music-${{ github.ref_name }}.apk"
 
       - name: Publish GitHub Release with APK
         uses: softprops/action-gh-release@v2
         with:
-          files: Aura-*.apk
+          files: Aura Music-*.apk
           generate_release_notes: true

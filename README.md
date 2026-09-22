@@ -2,7 +2,13 @@
 
 **Website:** https://listen-aura.vercel.app/ · **Download:** [GitHub Releases](https://github.com/Ai-Chetan/Aura-Music/releases)
 
+> **Open source (MIT) — contributors welcome.** Aura is built in the open: no hidden servers, no closed SDKs.
+> Browse the [source](https://github.com/Ai-Chetan/Aura-Music), [report an issue](https://github.com/Ai-Chetan/Aura-Music/issues),
+> or open a PR — see [`CONTRIBUTING.md`](CONTRIBUTING.md). Newcomers welcome.
+
 A private, on-device music player: paste a YouTube link, keep the best-available audio, organize everything with tags, and listen through a futuristic animated UI with full system playback integration.
+
+> **Music rights:** Aura is a private player — not a music provider. It doesn't own any songs and claims no rights over them. All music, album art, and names belong to their respective artists, labels, and rights holders (YouTube™ is a trademark of Google LLC). Aura only keeps what *you* choose on your own phone for private offline listening, with no sharing or redistribution built in. Please save only content you own or have permission to keep, and respect creators and platform terms.
 
 > **Responsible-use note:** Aura saves audio for your own private listening only. Automated downloading may conflict with YouTube's Terms of Service — only save content you have the right to keep, and never redistribute downloaded files. The app contains no sharing or bulk-export features by design.
 
@@ -108,8 +114,20 @@ Next up: playback speed, sleep timer, crossfade, smart tag-playlists, most-playe
 
 ## Contributing
 
-Issues and PRs are welcome — see [`CONTRIBUTING.md`](CONTRIBUTING.md).
+Aura is open source under MIT and **contributors are welcome** — code, docs, design, and bug reports all count.
+
+- Good first steps: [open an issue](https://github.com/Ai-Chetan/Aura-Music/issues), improve docs in `docs/`, polish UI tokens in `ui/theme/`, or fix a small bug.
+- One focused change per PR, with what you tested (device/API level helps).
+- Full guidelines: see [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## License
 
 MIT — see [`LICENSE`](LICENSE). Note that third-party dependencies carry their own licenses (in particular, NewPipeExtractor is GPL-3.0).
+
+## Author
+
+Developed by [@Ai-Chetan](https://github.com/Ai-Chetan) for the open-source community.
+
+Aura is developed in the open at [Ai-Chetan/Aura-Music](https://github.com/Ai-Chetan/Aura-Music) — stars, forks, issues, and PRs are all welcome.
+
+*All songs, artwork, and trademarks belong to their respective owners. Aura hosts no music and claims no rights — your private player only.*

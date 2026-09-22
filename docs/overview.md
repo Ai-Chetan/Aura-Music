@@ -1,5 +1,7 @@
 # Project Overview — Aura
 
+> Aura is open source (MIT) — contributors are welcome. See `../CONTRIBUTING.md` to report issues, improve docs, or open a PR.
+
 ## 1. What this is
 
 **Aura** is a personal, single-user Android music player that:
@@ -25,6 +27,7 @@ Anyone who wants a private, on-device music vault on Android: paste links, curat
 
 ## 4. Non-goals / constraints
 
+- **Not a music owner or host.** Aura does not own, host, license, or distribute any songs. All music, artwork, and trademarks belong to their respective artists, labels, and rights holders. The app is a private player only — it keeps what you choose on your own device for offline listening.
 - **Not a redistribution tool.** The app downloads audio for private listening only. It does not upload, share, or redistribute extracted audio.
 - **Not truly "lossless" in the audiophile sense.** YouTube encodes all audio to Opus or AAC (typically 128–160 kbps). "No loss" here means: *grab the best native stream YouTube offers, and never re-encode or re-compress it afterward.* Tracks at ~150 kbps+ Opus are badged `HQ • BEST`, ≥128 kbps as `HQ`.
 - **No official YouTube download API.** YouTube's Data API does not provide audio download; this app uses stream extraction (see `architecture.md`) the same way apps like NewPipe do. Automated downloading may conflict with YouTube's Terms of Service — use at your own discretion, for content you have the right to save, and do not redistribute.
@@ -86,3 +89,9 @@ See `backlog.md` for the prioritized list.
 - `data-model.md` — database schema, entities, repository contracts
 - `build-guide.md` — phased implementation plan
 - `backlog.md` — prioritized feature list beyond v1
+
+## 9. Author & rights
+
+Developed by [@Ai-Chetan](https://github.com/Ai-Chetan) for the open-source community (MIT).
+
+Aura claims no rights over any music — all songs and artwork belong to their respective owners. Please use the app for private listening to content you own or have permission to keep.
