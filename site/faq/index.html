@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Aura FAQ — Offline Playback, Tags, Android &amp; Privacy | Aura Music</title>
+  <meta name="description" content="Frequently asked questions about Aura Music: offline playback, Android support, tags vs playlists, lock-screen controls, downloads, backups, privacy and open source.">
+  <link rel="canonical" href="https://listen-aura.vercel.app/faq/">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Aura Music">
+  <meta property="og:url" content="https://listen-aura.vercel.app/faq/">
+  <meta property="og:title" content="Aura FAQ — Offline Playback, Tags, Android &amp; Privacy">
+  <meta property="og:description" content="Answers about offline playback, Android support, tags, lock-screen controls, backups and privacy.">
+  <meta property="og:image" content="https://listen-aura.vercel.app/screenshots/01-home-continue-listening-top-hits.webp">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Aura FAQ — Offline Playback, Tags, Android &amp; Privacy">
+  <meta name="twitter:description" content="Answers about offline playback, Android support, tags, lock-screen controls, backups and privacy.">
+  <meta name="twitter:image" content="https://listen-aura.vercel.app/screenshots/01-home-continue-listening-top-hits.webp">
+  <link rel="icon" type="image/png" href="../aura-icon.png">
+  <link rel="apple-touch-icon" href="../app-icon.png">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      { "@type": "Question", "name": "Is Aura an offline music player?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Songs you download in Aura are stored on your phone and play with no signal, no account and no subscription." } },
+      { "@type": "Question", "name": "Is Aura available for Android?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Aura supports Android 8 and newer, distributed as a free app file (APK) on GitHub Releases." } },
+      { "@type": "Question", "name": "Does Aura have ads, accounts or tracking?", "acceptedAnswer": { "@type": "Answer", "text": "No. Aura has no accounts, no ads and no tracking of any kind. Files, tags and listening history stay on your device." } },
+      { "@type": "Question", "name": "How does Aura organize music with tags?", "acceptedAnswer": { "@type": "Answer", "text": "Each song can carry many tags. Mix and match them to filter, search by title or artist, and sort six ways." } },
+      { "@type": "Question", "name": "Does Aura support lock-screen controls?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. You get notification and lock-screen controls, plus queue, shuffle and repeat." } },
+      { "@type": "Question", "name": "Is Aura free and open source?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Aura is free forever and MIT-licensed. The source is on GitHub and contributors are welcome." } },
+      { "@type": "Question", "name": "How do backups work?", "acceptedAnswer": { "@type": "Answer", "text": "Aura saves a backup file — your full library or just selected songs — and brings everything back, tags included." } },
+      { "@type": "Question", "name": "What is the difference between downloads and Saved tracks?", "acceptedAnswer": { "@type": "Answer", "text": "Downloads are stored on your phone and play offline. Saved tracks are streaming shortcuts that need a connection but still start near-instantly." } },
+      { "@type": "Question", "name": "Who owns the music in Aura?", "acceptedAnswer": { "@type": "Answer", "text": "Aura does not own, host or license any music. All songs, artwork and trademarks belong to their respective artists, labels and rights holders. YouTube is a trademark of Google LLC. Aura is a private on-device player only." } },
+      { "@type": "Question", "name": "Who made Aura?", "acceptedAnswer": { "@type": "Answer", "text": "Aura is developed by Ai-Chetan (github.com/Ai-Chetan) for the open-source community under the MIT licence." } }
+    ]
+  }
+  </script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box}
+    :root{--paper:#EDF2F6;--card:#fff;--ink:#06121D;--soft:#23394C;--muted:#52697E;--accent:#0B7FC4;--accent-deep:#075E92;--line:rgba(6,18,29,.12);--r:14px;--font:"Inter",ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif}
+    html{scroll-behavior:smooth;background:var(--paper)}
+    body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--font);line-height:1.65;font-size:1.02rem;-webkit-font-smoothing:antialiased}
+    .nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px clamp(18px,4vw,56px);background:rgba(237,242,246,.85);border-bottom:1px solid var(--line);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+    .brand{display:inline-flex;align-items:center;gap:10px;font-weight:700;font-size:1.1rem}
+    .brand img{width:30px;height:30px;border-radius:9px}
+    .brand img.brand-lockup{width:auto;height:42px;border-radius:0;background:none}
+    .nav nav{display:flex;flex-wrap:wrap;gap:2px 4px;align-items:center}
+    .nav nav a{padding:8px 12px;border-radius:999px;font-size:.86rem;font-weight:560;color:var(--muted)}
+    .nav nav a:hover{color:var(--ink);background:rgba(6,18,29,.05)}
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:12px 22px;border-radius:999px;font-weight:620;font-size:.93rem;background:var(--ink);color:#fff;text-decoration:none}
+    .btn--sm{padding:9px 16px;font-size:.8rem}
+    .wrap{width:min(880px,100%);margin:0 auto;padding:clamp(36px,6vw,72px) clamp(20px,4vw,40px) 80px}
+    .crumbs{font-size:.8rem;color:var(--muted);margin-bottom:18px}
+    .crumbs a{color:var(--accent-deep)}
+    h1{font-size:clamp(2.1rem,5.4vw,3.4rem);line-height:1.02;letter-spacing:-.04em;margin:0 0 16px}
+    .lede{font-size:clamp(1.05rem,1.6vw,1.25rem);color:var(--muted);max-width:60ch;margin:0 0 28px}
+    h2{font-size:1.05rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin:40px 0 6px}
+    details{border:1px solid var(--line);border-radius:var(--r);background:var(--card);margin:10px 0}
+    details summary{cursor:pointer;padding:18px 20px;font-weight:620;font-size:1.05rem;letter-spacing:-.01em;list-style:none}
+    details summary::-webkit-details-marker{display:none}
+    details div{padding:0 20px 20px;color:var(--soft)}
+    details div p{margin:0 0 10px}
+    .cta{margin-top:48px;background:#04101A;color:#EDF4F9;border-radius:22px;padding:clamp(28px,4vw,44px);text-align:center}
+    .cta h2{color:#fff;margin:0 0 10px;text-transform:none;letter-spacing:-.03em;font-size:clamp(1.6rem,4vw,2.4rem)}
+    .cta p{color:#92A8BB;max-width:52ch;margin:0 auto 22px}
+    .cta .btn{background:#fff;color:#06121D}
+    footer{border-top:1px solid var(--line);padding:32px clamp(20px,4vw,56px);display:flex;flex-wrap:wrap;gap:8px 28px;justify-content:space-between;font-size:.85rem;color:var(--muted)}
+    footer a{color:var(--muted);margin-right:16px}
+    a{color:var(--accent-deep)}
+  </style>
+</head>
+<body>
+  <header class="nav">
+    <a class="brand" href="../" aria-label="Aura home"><img class="brand-lockup" src="../aura-nav.png" alt="Aura" width="2172" height="724" decoding="async"></a>
+    <nav aria-label="Primary">
+      <a href="../features/">Features</a>
+      <a href="../offline-music-player/">Offline player</a>
+      <a href="../android-music-player/">Android player</a>
+      <a href="../download/">Download</a>
+      <a href="../faq/">FAQ</a>
+      <a href="../blog/">Blog</a>
+    </nav>
+    <a class="btn btn--sm" href="https://github.com/Ai-Chetan/Aura-Music/releases" target="_blank" rel="noopener noreferrer">Get Aura</a>
+  </header>
+
+  <main class="wrap">
+    <p class="crumbs"><a href="../">Home</a> · FAQ</p>
+    <h1>Aura FAQ</h1>
+    <p class="lede">Plain answers about offline playback, Android support, tags, controls, backups and privacy. New here? Start with <a href="../features/">features</a> or <a href="../download/">download</a>.</p>
+
+    <h2>Offline &amp; Android</h2>
+    <details open>
+      <summary>Is Aura an offline music player?</summary>
+      <div><p>Yes. Songs you download are stored on your phone and play with no signal and no sign-in. Queues, tags, filters and lock-screen controls all work offline. Read more: <a href="../offline-music-player/">offline music player</a>.</p></div>
+    </details>
+    <details>
+      <summary>Is Aura available for Android?</summary>
+      <div><p>Yes — Android 8 and newer, as a free app file (APK) from <a href="https://github.com/Ai-Chetan/Aura-Music/releases" target="_blank" rel="noopener noreferrer">GitHub Releases</a>. Details: <a href="../android-music-player/">Android player</a>.</p></div>
+    </details>
+    <details>
+      <summary>What's the difference between downloads and Saved tracks?</summary>
+      <div><p><strong>Downloads</strong> live on your phone and play fully offline. <strong>Saved</strong> tracks are streaming shortcuts — they need a connection but still start near-instantly, with the same tags and filters.</p></div>
+    </details>
+
+    <h2>Library &amp; playback</h2>
+    <details>
+      <summary>How does Aura organize music with tags?</summary>
+      <div><p>Each song can carry many tags. Mix and match them to filter, search by title or artist, and sort six ways. Guide: <a href="../blog/organize-music-with-tags/">tags instead of playlists</a>.</p></div>
+    </details>
+    <details>
+      <summary>Does Aura support lock-screen controls and queues?</summary>
+      <div><p>Yes. Notification + lock-screen controls, a swipeable mini player, and a real queue with play-next, reorder, shuffle and repeat.</p></div>
+    </details>
+    <details>
+      <summary>What is Spice&nbsp;up and radio?</summary>
+      <div><p>Aura learns what you like from what you play, replay and skip — privately, on your phone. Spice&nbsp;up keeps recommended picks flowing behind any playlist; the music never stops — every song lines up the next ones.</p></div>
+    </details>
+    <details>
+      <summary>How do backups work?</summary>
+      <div><p>Save a backup file — your full library or just selected songs — share it anywhere, and bring everything back, tags included, when you switch phones.</p></div>
+    </details>
+
+    <h2>Privacy, price &amp; source</h2>
+    <details>
+      <summary>Does Aura have ads, accounts or tracking?</summary>
+      <div><p>No — no accounts, no ads, no tracking of any kind. See the <a href="../privacy/">privacy notes</a>.</p></div>
+    </details>
+    <details>
+      <summary>Is Aura free and open source?</summary>
+      <div><p>Yes. Completely free forever — no paywalls, no premium tier. Also MIT-licensed and open source: <a href="https://github.com/Ai-Chetan/Aura-Music" target="_blank" rel="noopener noreferrer">read the source</a>, report issues, or fork it. Contributors are welcome — see the <a href="https://github.com/Ai-Chetan/Aura-Music/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">contributing guide</a>.</p></div>
+    </details>
+    <details>
+      <summary>Is saving audio allowed?</summary>
+      <div><p>Aura is a private, on-device player — not a music provider. It doesn't own any songs and claims no rights over them: all music, artwork, and names belong to their respective artists, labels, and rights holders. Aura only keeps what <em>you</em> choose on your own phone for offline listening, with no sharing or redistribution built in. Please save only content you own or have permission to keep, and respect creators and platform terms.</p></div>
+    </details>
+    <details>
+      <summary>Who owns the music in Aura?</summary>
+      <div><p>No songs belong to Aura. Every track, artwork, and trademark stays with its respective owner — artists, labels, and platforms such as YouTube™ (Google LLC). Aura hosts nothing and licenses nothing; it simply plays your private collection.</p></div>
+    </details>
+    <details>
+      <summary>Who made Aura?</summary>
+      <div><p>Aura is developed by <a href="https://github.com/Ai-Chetan" target="_blank" rel="noopener noreferrer">Ai-Chetan</a> for the open-source community (MIT licence). Contributions are welcome — see the <a href="https://github.com/Ai-Chetan/Aura-Music/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">contributing guide</a>.</p></div>
+    </details>
+
+    <div class="cta">
+      <h2>Ready to try it?</h2>
+      <p>Free APK, no account, your music kept local. Aura is open source under MIT — contributors welcome.</p>
+      <p><a class="btn" href="../download/">Download Aura</a></p>
+      <p style="font-size:.85rem"><a href="https://github.com/Ai-Chetan/Aura-Music" target="_blank" rel="noopener noreferrer" style="color:#7DD3FC">Source on GitHub</a> · <a href="https://github.com/Ai-Chetan/Aura-Music/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer" style="color:#7DD3FC">How to contribute</a></p>
+    </div>
+  </main>
+
+  <footer>
+    <span>© 2026 Aura · MIT licence · Open source — <a href="https://github.com/Ai-Chetan/Aura-Music/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">contributors welcome</a></span>
+    <nav aria-label="Footer">
+      <a href="../">Home</a><a href="../features/">Features</a><a href="../offline-music-player/">Offline player</a><a href="../download/">Download</a><a href="../privacy/">Privacy</a><a href="../blog/">Blog</a>
+    </nav>
+    <small style="flex-basis:100%;font-size:.78rem;line-height:1.6">Aura does not own, host, or license any music. All songs, artwork &amp; trademarks belong to their respective artists, labels &amp; rights holders — YouTube™ is a trademark of Google LLC. Private listening only; please keep content you own or have permission to store. Developed by <a href="https://github.com/Ai-Chetan" target="_blank" rel="noopener noreferrer">Ai-Chetan</a> for the open-source community.</small>
+  </footer>
+</body>
+</html>

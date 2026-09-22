@@ -1,0 +1,14 @@
+{
+  "name": "Aura Music",
+  "short_name": "Aura",
+  "description": "Aura is a lightweight, free offline music player for Android. No ads, no accounts, no tracking.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#EDF2F6",
+  "theme_color": "#04101A",
+  "icons": [
+    { "src": "app-icon.png", "sizes": "432x432", "type": "image/png", "purpose": "any" },
+    { "src": "aura-icon.png", "sizes": "676x676", "type": "image/png", "purpose": "any" }
+  ]
+}

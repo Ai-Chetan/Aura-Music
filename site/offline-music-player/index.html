@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Offline Music Player for Android — Listen Without Signal | Aura</title>
+  <meta name="description" content="Aura is a free offline music player for Android. Save the best available audio to your phone, organize it with tags, and keep listening with no signal, no account and no ads.">
+  <link rel="canonical" href="https://listen-aura.vercel.app/offline-music-player/">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Aura Music">
+  <meta property="og:url" content="https://listen-aura.vercel.app/offline-music-player/">
+  <meta property="og:title" content="Offline Music Player for Android — Listen Without Signal | Aura">
+  <meta property="og:description" content="Save the best available audio to your phone and keep listening with no signal, no account and no ads.">
+  <meta property="og:image" content="https://listen-aura.vercel.app/screenshots/01-home-continue-listening-top-hits.webp">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Offline Music Player for Android — Listen Without Signal | Aura">
+  <meta name="twitter:description" content="Save the best available audio to your phone and keep listening with no signal, no account and no ads.">
+  <meta name="twitter:image" content="https://listen-aura.vercel.app/screenshots/01-home-continue-listening-top-hits.webp">
+  <link rel="icon" type="image/png" href="../aura-icon.png">
+  <link rel="apple-touch-icon" href="../app-icon.png">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Aura Music",
+        "applicationCategory": "MultimediaApplication",
+        "operatingSystem": "Android",
+        "isAccessibleForFree": true,
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "url": "https://listen-aura.vercel.app/",
+        "downloadUrl": "https://github.com/Ai-Chetan/Aura-Music/releases"
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://listen-aura.vercel.app/" },
+          { "@type": "ListItem", "position": 2, "name": "Offline music player", "item": "https://listen-aura.vercel.app/offline-music-player/" }
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          { "@type": "Question", "name": "Does Aura play music offline?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Songs you download in Aura are stored on your phone and play with no mobile signal or Wi-Fi, no account and no subscription." } },
+          { "@type": "Question", "name": "Do I need an account or subscription to listen offline?", "acceptedAnswer": { "@type": "Answer", "text": "No. Aura has no accounts and no paywalled offline mode. Downloads, tags and playback all work offline by default." } }
+        ]
+      }
+    ]
+  }
+  </script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box}
+    :root{--paper:#EDF2F6;--card:#fff;--ink:#06121D;--soft:#23394C;--muted:#52697E;--accent:#0B7FC4;--accent-deep:#075E92;--line:rgba(6,18,29,.12);--r:18px;--font:"Inter",ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif}
+    html{scroll-behavior:smooth;background:var(--paper)}
+    body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--font);line-height:1.65;font-size:1.02rem;-webkit-font-smoothing:antialiased}
+    .nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px clamp(18px,4vw,56px);background:rgba(237,242,246,.85);border-bottom:1px solid var(--line);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+    .brand{display:inline-flex;align-items:center;gap:10px;font-weight:700;font-size:1.1rem}
+    .brand img{width:30px;height:30px;border-radius:9px}
+    .brand img.brand-lockup{width:auto;height:42px;border-radius:0;background:none}
+    .nav nav{display:flex;flex-wrap:wrap;gap:2px 4px;align-items:center}
+    .nav nav a{padding:8px 12px;border-radius:999px;font-size:.86rem;font-weight:560;color:var(--muted)}
+    .nav nav a:hover{color:var(--ink);background:rgba(6,18,29,.05)}
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:12px 22px;border-radius:999px;font-weight:620;font-size:.93rem;background:var(--ink);color:#fff;text-decoration:none}
+    .btn--sm{padding:9px 16px;font-size:.8rem}
+    .wrap{width:min(880px,100%);margin:0 auto;padding:clamp(36px,6vw,72px) clamp(20px,4vw,40px) 80px}
+    .crumbs{font-size:.8rem;color:var(--muted);margin-bottom:18px}
+    .crumbs a{color:var(--accent-deep)}
+    h1{font-size:clamp(2.1rem,5.4vw,3.4rem);line-height:1.02;letter-spacing:-.04em;margin:0 0 16px;max-width:22ch}
+    .lede{font-size:clamp(1.05rem,1.6vw,1.25rem);color:var(--muted);max-width:60ch;margin:0 0 28px}
+    h2{font-size:clamp(1.4rem,3vw,1.9rem);letter-spacing:-.03em;margin:44px 0 10px}
+    p{margin:0 0 14px;color:var(--soft)}
+    ul.feat{margin:12px 0 18px;padding:0;list-style:none;display:grid;gap:8px}
+    ul.feat li{padding-left:26px;position:relative;color:var(--soft)}
+    ul.feat li::before{content:"";position:absolute;left:4px;top:.62em;width:7px;height:7px;border-radius:50%;background:var(--accent)}
+    figure{margin:26px 0;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+    figure img{width:100%;max-width:380px;margin:0 auto;height:auto;border-radius:12px;display:block;background:#0a1826}
+    figcaption{text-align:center;font-size:.82rem;color:var(--muted);margin-top:10px}
+    .note{background:#fff;border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:12px;padding:14px 18px;font-size:.95rem;color:var(--soft)}
+    .cta{margin-top:48px;background:#04101A;color:#EDF4F9;border-radius:22px;padding:clamp(28px,4vw,44px);text-align:center}
+    .cta h2{color:#fff;margin:0 0 10px}
+    .cta p{color:#92A8BB;max-width:52ch;margin:0 auto 22px}
+    .cta .btn{background:#fff;color:#06121D}
+    footer{border-top:1px solid var(--line);padding:32px clamp(20px,4vw,56px);display:flex;flex-wrap:wrap;gap:8px 28px;justify-content:space-between;font-size:.85rem;color:var(--muted)}
+    footer a{color:var(--muted);margin-right:16px}
+    a{color:var(--accent-deep)}
+  </style>
+</head>
+<body>
+  <header class="nav">
+    <a class="brand" href="../" aria-label="Aura home"><img class="brand-lockup" src="../aura-nav.png" alt="Aura" width="2172" height="724" decoding="async"></a>
+    <nav aria-label="Primary">
+      <a href="../features/">Features</a>
+      <a href="../offline-music-player/">Offline player</a>
+      <a href="../android-music-player/">Android player</a>
+      <a href="../download/">Download</a>
+      <a href="../faq/">FAQ</a>
+      <a href="../blog/">Blog</a>
+    </nav>
+    <a class="btn btn--sm" href="https://github.com/Ai-Chetan/Aura-Music/releases" target="_blank" rel="noopener noreferrer">Get Aura</a>
+  </header>
+
+  <main class="wrap">
+    <p class="crumbs"><a href="../">Home</a> · Offline music player</p>
+    <h1>An offline music player for Android that keeps working with no signal.</h1>
+    <p class="lede">Aura stores the songs you save directly on your phone — your files, your tags, your history. Flights, tunnels, data-saver days: the music keeps playing.</p>
+
+    <h2>What “offline” means in Aura</h2>
+    <p>Downloaded songs live in their own space on your device and play with no mobile signal or Wi-Fi. Your tags, filters, queue and personal radio all work offline too — there is no server to phone home to, because there is no account and no cloud library.</p>
+    <ul class="feat">
+      <li>No account, no subscription gate on offline playback</li>
+      <li>No ads, ever</li>
+      <li>Continue listening, queues, shuffle and repeat — all offline</li>
+      <li>Lock-screen and notification controls with no signal</li>
+    </ul>
+
+    <h2>Saving music for offline listening</h2>
+    <p>Paste a link — a single track, a Short, or a playlist of up to 50 — and Aura keeps downloading it in the background, even if you leave the screen. Every song is kept in its original quality, any problem track is flagged on its own without stopping the rest, and the download queue shows overall and per-song progress.</p>
+    <figure>
+      <img src="../screenshots/17-library-download-queue-progress.webp" alt="Aura download queue showing overall and per-song progress" width="640" height="1443" loading="lazy" decoding="async">
+      <figcaption>Watch every download land, then listen offline.</figcaption>
+    </figure>
+
+    <div class="note"><strong>Good to know:</strong> <em>Saved</em> songs are streaming shortcuts — they need a connection. Anything you <em>download</em> plays fully offline. Aura marks the difference clearly in the library.</div>
+
+    <h2>Organized for offline life</h2>
+    <p>Offline libraries go stale without organization. Aura's <a href="../features/">tag system</a> lets one song live under many tags, with mix-and-match filters and six sort orders — so a 2,000-track offline vault stays navigable. Simple backup files mean your offline collection survives a phone change.</p>
+
+    <h2>Light on storage and battery</h2>
+    <p>Songs are stored once on your phone, and playback is built for the background, so it uses very little battery. Aura uses its own storage space on your phone, so it never asks for access to all your files.</p>
+
+    <h2>Your music, their rights</h2>
+    <p>Aura doesn't own any songs and claims no rights over them — all music and artwork belong to their respective artists, labels, and rights holders. It simply plays what you choose to keep for private offline listening.</p>
+
+    <div class="cta">
+      <h2>Take your music offline.</h2>
+      <p>Free forever, no account. Download Aura and save your first songs in minutes. Open source under MIT, developed by <a href="https://github.com/Ai-Chetan" target="_blank" rel="noopener noreferrer" style="color:#7DD3FC">Ai-Chetan</a> — contributors welcome.</p>
+      <p><a class="btn" href="../download/">Download Aura for Android</a></p>
+      <p style="font-size:.85rem"><a href="../faq/" style="color:#7DD3FC">Offline FAQ</a> · <a href="../android-music-player/" style="color:#7DD3FC">Android details</a> · <a href="https://github.com/Ai-Chetan/Aura-Music/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer" style="color:#7DD3FC">How to contribute</a></p>
+    </div>
+  </main>
+
+  <footer>
+    <span>© 2026 Aura · MIT licence · Open source — <a href="https://github.com/Ai-Chetan/Aura-Music/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">contributors welcome</a></span>
+    <nav aria-label="Footer">
+      <a href="../">Home</a><a href="../features/">Features</a><a href="../android-music-player/">Android player</a><a href="../download/">Download</a><a href="../faq/">FAQ</a><a href="../privacy/">Privacy</a><a href="../blog/">Blog</a>
+    </nav>
+    <small style="flex-basis:100%;font-size:.78rem;line-height:1.6">Aura does not own, host, or license any music. All songs, artwork &amp; trademarks belong to their respective artists, labels &amp; rights holders — YouTube™ is a trademark of Google LLC. Private listening only; please keep content you own or have permission to store. Developed by <a href="https://github.com/Ai-Chetan" target="_blank" rel="noopener noreferrer">Ai-Chetan</a> for the open-source community.</small>
+  </footer>
+</body>
+</html>

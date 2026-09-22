@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Aura Features — Tags, Queues, Offline Playback &amp; On-Device Radio</title>
+  <meta name="description" content="Explore Aura's features: tag-powered library with mix-and-match filters, background downloads, real queues with shuffle and repeat, on-device radio, lock-screen controls and easy backups. Free, no ads, no accounts.">
+  <link rel="canonical" href="https://listen-aura.vercel.app/features/">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Aura Music">
+  <meta property="og:url" content="https://listen-aura.vercel.app/features/">
+  <meta property="og:title" content="Aura Features — Tags, Queues, Offline Playback &amp; On-Device Radio">
+  <meta property="og:description" content="Tag-powered library, background downloads, real queues, on-device radio and lock-screen controls. Free, no ads, no accounts.">
+  <meta property="og:image" content="https://listen-aura.vercel.app/screenshots/08-library-downloaded-tag-filters.webp">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Aura Features — Tags, Queues, Offline Playback &amp; On-Device Radio">
+  <meta name="twitter:description" content="Tag-powered library, background downloads, real queues, on-device radio and lock-screen controls.">
+  <meta name="twitter:image" content="https://listen-aura.vercel.app/screenshots/08-library-downloaded-tag-filters.webp">
+  <link rel="icon" type="image/png" href="../aura-icon.png">
+  <link rel="apple-touch-icon" href="../app-icon.png">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Aura Music",
+        "applicationCategory": "MultimediaApplication",
+        "operatingSystem": "Android",
+        "isAccessibleForFree": true,
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "url": "https://listen-aura.vercel.app/",
+        "downloadUrl": "https://github.com/Ai-Chetan/Aura-Music/releases"
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://listen-aura.vercel.app/" },
+          { "@type": "ListItem", "position": 2, "name": "Features", "item": "https://listen-aura.vercel.app/features/" }
+        ]
+      }
+    ]
+  }
+  </script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box}
+    :root{--paper:#EDF2F6;--card:#fff;--ink:#06121D;--soft:#23394C;--muted:#52697E;--accent:#0B7FC4;--accent-deep:#075E92;--line:rgba(6,18,29,.12);--r:18px;--font:"Inter",ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif}
+    html{scroll-behavior:smooth;background:var(--paper)}
+    body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--font);line-height:1.65;font-size:1.02rem;-webkit-font-smoothing:antialiased}
+    .nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px clamp(18px,4vw,56px);background:rgba(237,242,246,.85);border-bottom:1px solid var(--line);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+    .brand{display:inline-flex;align-items:center;gap:10px;font-weight:700;font-size:1.1rem}
+    .brand img{width:30px;height:30px;border-radius:9px}
+    .brand img.brand-lockup{width:auto;height:42px;border-radius:0;background:none}
+    .nav nav{display:flex;flex-wrap:wrap;gap:2px 4px;align-items:center}
+    .nav nav a{padding:8px 12px;border-radius:999px;font-size:.86rem;font-weight:560;color:var(--muted)}
+    .nav nav a:hover{color:var(--ink);background:rgba(6,18,29,.05)}
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:12px 22px;border-radius:999px;font-weight:620;font-size:.93rem;background:var(--ink);color:#fff;text-decoration:none}
+    .btn--sm{padding:9px 16px;font-size:.8rem}
+    .wrap{width:min(880px,100%);margin:0 auto;padding:clamp(36px,6vw,72px) clamp(20px,4vw,40px) 80px}
+    .crumbs{font-size:.8rem;color:var(--muted);margin-bottom:18px}
+    .crumbs a{color:var(--accent-deep)}
+    h1{font-size:clamp(2.1rem,5.4vw,3.4rem);line-height:1.02;letter-spacing:-.04em;margin:0 0 16px;max-width:20ch}
+    .lede{font-size:clamp(1.05rem,1.6vw,1.25rem);color:var(--muted);max-width:60ch;margin:0 0 28px}
+    h2{font-size:clamp(1.4rem,3vw,1.9rem);letter-spacing:-.03em;margin:44px 0 10px}
+    p{margin:0 0 14px;color:var(--soft)}
+    ul.feat{margin:12px 0 18px;padding:0;list-style:none;display:grid;gap:8px}
+    ul.feat li{padding-left:26px;position:relative;color:var(--soft)}
+    ul.feat li::before{content:"";position:absolute;left:4px;top:.62em;width:7px;height:7px;border-radius:50%;background:var(--accent)}
+    figure{margin:26px 0;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+    figure img{width:100%;max-width:380px;margin:0 auto;height:auto;border-radius:12px;display:block;background:#0a1826}
+    figcaption{text-align:center;font-size:.82rem;color:var(--muted);margin-top:10px}
+    .cta{margin-top:48px;background:#04101A;color:#EDF4F9;border-radius:22px;padding:clamp(28px,4vw,44px);text-align:center}
+    .cta h2{color:#fff;margin:0 0 10px}
+    .cta p{color:#92A8BB;max-width:52ch;margin:0 auto 22px}
+    .cta .btn{background:#fff;color:#06121D}
+    footer{border-top:1px solid var(--line);padding:32px clamp(20px,4vw,56px);display:flex;flex-wrap:wrap;gap:8px 28px;justify-content:space-between;font-size:.85rem;color:var(--muted)}
+    footer a{color:var(--muted);margin-right:16px}
+    footer a:hover{color:var(--ink)}
+    a{color:var(--accent-deep)}
+  </style>
+</head>
+<body>
+  <header class="nav">
+    <a class="brand" href="../" aria-label="Aura home"><img class="brand-lockup" src="../aura-nav.png" alt="Aura" width="2172" height="724" decoding="async"></a>
+    <nav aria-label="Primary">
+      <a href="../features/">Features</a>
+      <a href="../offline-music-player/">Offline player</a>
+      <a href="../android-music-player/">Android player</a>
+      <a href="../download/">Download</a>
+      <a href="../faq/">FAQ</a>
+      <a href="../blog/">Blog</a>
+    </nav>
+    <a class="btn btn--sm" href="https://github.com/Ai-Chetan/Aura-Music/releases" target="_blank" rel="noopener noreferrer">Get Aura</a>
+  </header>
+
+  <main class="wrap">
+    <p class="crumbs"><a href="../">Home</a> · Features</p>
+    <h1>Features built for people who keep their music.</h1>
+    <p class="lede">Aura is a lightweight, free <a href="../offline-music-player/">offline music player for Android</a> — no accounts, no ads, no tracking. Everything below runs on your phone.</p>
+
+    <h2>Tag-powered library, not rigid playlists</h2>
+    <p>Give every song as many tags as it deserves — <em>gym</em>, <em>focus</em>, <em>90s</em>, <em>acoustic</em> — then combine tags with AND / OR filters, search by title or artist, and sort six ways (recent, oldest, title A–Z / Z–A, longest / shortest). One track can live in as many corners of your library as it belongs to.</p>
+    <figure>
+      <img src="../screenshots/08-library-downloaded-tag-filters.webp" alt="Aura library filtered by several tags at once" width="640" height="1443" loading="lazy" decoding="async">
+      <figcaption>Multi-tag filters with AND / OR logic.</figcaption>
+    </figure>
+
+    <h2>Save audio in the background</h2>
+    <p>Paste a link — single tracks, Shorts, or playlists of up to 50 — and keep downloading in the background, so leaving the screen never stops them. The download queue shows overall progress with per-song rows, cancel support, and a retry report that explains each failure in plain language. Every song is kept in its original quality — never converted or watered down.</p>
+    <ul class="feat">
+      <li>Playlist imports up to 50 tracks with per-video failure isolation</li>
+      <li>Collapsible download queue with overall % and per-song rows</li>
+      <li>Throttling-hardened retries with friendly, non-technical errors</li>
+    </ul>
+
+    <h2>Search it, play it instantly — or keep it</h2>
+    <p>Look up any song and press play to hear it straight away without saving anything. Like it? Save it, and it joins your library. You can also save tracks as <em>Saved</em> to stream them later — they still start almost instantly.</p>
+
+    <h2>A real queue with shuffle, repeat and Spice&nbsp;up</h2>
+    <p>Play-next, reorder, shuffle and repeat off / one / all across a real queue. Shuffle play respects your active filters, and the Spice&nbsp;up switch keeps recommended picks flowing in behind the playlist you're on — playlist order always wins first.</p>
+    <figure>
+      <img src="../screenshots/12-queue-bottom-sheet.webp" alt="Aura queue bottom sheet with reorder controls" width="640" height="1443" loading="lazy" decoding="async">
+      <figcaption>The queue: reorder, play-next, shuffle, repeat.</figcaption>
+    </figure>
+
+    <h2>Radio that learns you — on your device</h2>
+    <p>What you play, replay and skip teaches Aura what you like — all privately on your phone. Top-hits, For-You and search taps start a radio session where every following song is picked for you — and the music never stops: every song lines up the next ones.</p>
+
+    <h2>There when the app isn't</h2>
+    <p>You get a media notification and <a href="../android-music-player/">Android lock-screen controls</a>, a mini player you can swipe between songs, and full artwork-swipe track changes on Now Playing.</p>
+    <figure>
+      <img src="../screenshots/21-lock-screen-media-controls.webp" alt="Aura playback controls on the Android lock screen" width="640" height="1443" loading="lazy" decoding="async">
+      <figcaption>Notification and lock-screen controls.</figcaption>
+    </figure>
+
+    <h2>Back up, move on, restore</h2>
+    <p>Save a backup file — your whole library or just the parts you choose — share it anywhere, then bring everything back (tags included) when you switch phones.</p>
+
+    <h2>Yours to keep, theirs to own</h2>
+    <p>Aura doesn't own any songs and claims no rights over them — all music and artwork belong to their respective artists, labels, and rights holders. It's simply your private player for offline listening.</p>
+
+    <div class="cta">
+      <h2>Try every feature free.</h2>
+      <p>No account, no ads, no tracking. Install the APK and start a library that stays yours. Aura is open source under MIT, developed by <a href="https://github.com/Ai-Chetan" target="_blank" rel="noopener noreferrer" style="color:#7DD3FC">Ai-Chetan</a> — contributors welcome.</p>
+      <p><a class="btn" href="../download/">Download Aura for Android</a></p>
+      <p style="font-size:.85rem"><a href="../faq/" style="color:#7DD3FC">Read the FAQ</a> · <a href="https://github.com/Ai-Chetan/Aura-Music" target="_blank" rel="noopener noreferrer" style="color:#7DD3FC">Source on GitHub</a> · <a href="https://github.com/Ai-Chetan/Aura-Music/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer" style="color:#7DD3FC">How to contribute</a></p>
+    </div>
+  </main>
+
+  <footer>
+    <span>© 2026 Aura · MIT licence · Open source — <a href="https://github.com/Ai-Chetan/Aura-Music/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">contributors welcome</a></span>
+    <nav aria-label="Footer">
+      <a href="../">Home</a><a href="../offline-music-player/">Offline player</a><a href="../android-music-player/">Android player</a><a href="../download/">Download</a><a href="../faq/">FAQ</a><a href="../privacy/">Privacy</a><a href="../blog/">Blog</a>
+    </nav>
+    <small style="flex-basis:100%;font-size:.78rem;line-height:1.6">Aura does not own, host, or license any music. All songs, artwork &amp; trademarks belong to their respective artists, labels &amp; rights holders — YouTube™ is a trademark of Google LLC. Private listening only; please keep content you own or have permission to store. Developed by <a href="https://github.com/Ai-Chetan" target="_blank" rel="noopener noreferrer">Ai-Chetan</a> for the open-source community.</small>
+  </footer>
+</body>
+</html>

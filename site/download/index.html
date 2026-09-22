@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Download Aura — Free Offline Music Player for Android (APK)</title>
+  <meta name="description" content="Download Aura free for Android (APK) from GitHub Releases. No account, no ads, no tracking. Requires Android 8.0+. Open source under MIT.">
+  <link rel="canonical" href="https://listen-aura.vercel.app/download/">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Aura Music">
+  <meta property="og:url" content="https://listen-aura.vercel.app/download/">
+  <meta property="og:title" content="Download Aura — Free Offline Music Player for Android (APK)">
+  <meta property="og:description" content="Free APK from GitHub Releases. No account, no ads, no tracking. Android 8.0+.">
+  <meta property="og:image" content="https://listen-aura.vercel.app/screenshots/01-home-continue-listening-top-hits.webp">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Download Aura — Free Offline Music Player for Android (APK)">
+  <meta name="twitter:description" content="Free APK from GitHub Releases. No account, no ads, no tracking. Android 8.0+.">
+  <meta name="twitter:image" content="https://listen-aura.vercel.app/screenshots/01-home-continue-listening-top-hits.webp">
+  <link rel="icon" type="image/png" href="../aura-icon.png">
+  <link rel="apple-touch-icon" href="../app-icon.png">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Aura Music",
+        "applicationCategory": "MultimediaApplication",
+        "operatingSystem": "Android 8.0+",
+        "isAccessibleForFree": true,
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "url": "https://listen-aura.vercel.app/",
+        "downloadUrl": "https://github.com/Ai-Chetan/Aura-Music/releases"
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://listen-aura.vercel.app/" },
+          { "@type": "ListItem", "position": 2, "name": "Download", "item": "https://listen-aura.vercel.app/download/" }
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          { "@type": "Question", "name": "Is Aura free to download?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Aura is free forever and open source under the MIT licence. Download the APK from GitHub Releases — no account, no payment. Contributors are welcome." } },
+          { "@type": "Question", "name": "Which Android versions does Aura support?", "acceptedAnswer": { "@type": "Answer", "text": "Android 8 and newer, on phones and tablets." } },
+          { "@type": "Question", "name": "Why isn't Aura on the Play Store yet?", "acceptedAnswer": { "@type": "Answer", "text": "Aura is currently distributed as a direct APK download from GitHub Releases while it matures. Check the releases page for the latest version and changelog." } }
+        ]
+      }
+    ]
+  }
+  </script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box}
+    :root{--paper:#EDF2F6;--card:#fff;--ink:#06121D;--soft:#23394C;--muted:#52697E;--accent:#0B7FC4;--accent-deep:#075E92;--line:rgba(6,18,29,.12);--r:18px;--font:"Inter",ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif}
+    html{scroll-behavior:smooth;background:var(--paper)}
+    body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--font);line-height:1.65;font-size:1.02rem;-webkit-font-smoothing:antialiased}
+    .nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px clamp(18px,4vw,56px);background:rgba(237,242,246,.85);border-bottom:1px solid var(--line);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+    .brand{display:inline-flex;align-items:center;gap:10px;font-weight:700;font-size:1.1rem}
+    .brand img{width:30px;height:30px;border-radius:9px}
+    .brand img.brand-lockup{width:auto;height:42px;border-radius:0;background:none}
+    .nav nav{display:flex;flex-wrap:wrap;gap:2px 4px;align-items:center}
+    .nav nav a{padding:8px 12px;border-radius:999px;font-size:.86rem;font-weight:560;color:var(--muted)}
+    .nav nav a:hover{color:var(--ink);background:rgba(6,18,29,.05)}
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:14px 28px;border-radius:999px;font-weight:650;font-size:1rem;background:var(--ink);color:#fff;text-decoration:none}
+    .btn--sm{padding:9px 16px;font-size:.8rem}
+    .wrap{width:min(880px,100%);margin:0 auto;padding:clamp(36px,6vw,72px) clamp(20px,4vw,40px) 80px}
+    .crumbs{font-size:.8rem;color:var(--muted);margin-bottom:18px}
+    .crumbs a{color:var(--accent-deep)}
+    h1{font-size:clamp(2.1rem,5.4vw,3.4rem);line-height:1.02;letter-spacing:-.04em;margin:0 0 16px;max-width:22ch}
+    .lede{font-size:clamp(1.05rem,1.6vw,1.25rem);color:var(--muted);max-width:60ch;margin:0 0 28px}
+    h2{font-size:clamp(1.4rem,3vw,1.9rem);letter-spacing:-.03em;margin:44px 0 10px}
+    p{margin:0 0 14px;color:var(--soft)}
+    ol.steps{margin:16px 0;padding:0;list-style:none;counter-reset:step;display:grid;gap:12px}
+    ol.steps li{counter-increment:step;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px 18px 18px 64px;position:relative;color:var(--soft)}
+    ol.steps li::before{content:counter(step);position:absolute;left:18px;top:18px;width:30px;height:30px;border-radius:50%;background:var(--ink);color:#fff;display:grid;place-items:center;font-weight:700;font-size:.9rem}
+    ol.steps strong{color:var(--ink)}
+    .note{background:#fff;border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:12px;padding:14px 18px;font-size:.95rem;color:var(--soft);margin:20px 0}
+    details{border:1px solid var(--line);border-radius:12px;background:var(--card);margin:10px 0}
+    details summary{cursor:pointer;padding:16px 18px;font-weight:600;list-style:none}
+    details summary::-webkit-details-marker{display:none}
+    details p{padding:0 18px 18px}
+    footer{border-top:1px solid var(--line);padding:32px clamp(20px,4vw,56px);display:flex;flex-wrap:wrap;gap:8px 28px;justify-content:space-between;font-size:.85rem;color:var(--muted)}
+    footer a{color:var(--muted);margin-right:16px}
+    a{color:var(--accent-deep)}
+  </style>
+</head>
+<body>
+  <header class="nav">
+    <a class="brand" href="../" aria-label="Aura home"><img class="brand-lockup" src="../aura-nav.png" alt="Aura" width="2172" height="724" decoding="async"></a>
+    <nav aria-label="Primary">
+      <a href="../features/">Features</a>
+      <a href="../offline-music-player/">Offline player</a>
+      <a href="../android-music-player/">Android player</a>
+      <a href="../download/">Download</a>
+      <a href="../faq/">FAQ</a>
+      <a href="../blog/">Blog</a>
+    </nav>
+    <a class="btn btn--sm" href="https://github.com/Ai-Chetan/Aura-Music/releases" target="_blank" rel="noopener noreferrer">Get Aura</a>
+  </header>
+
+  <main class="wrap">
+    <p class="crumbs"><a href="../">Home</a> · Download</p>
+    <h1>Download Aura for Android — free, no account.</h1>
+    <p class="lede">Get the latest APK from GitHub Releases. Android 8.0+, open source under MIT, no ads and no tracking.</p>
+    <p><a class="btn" href="https://github.com/Ai-Chetan/Aura-Music/releases" target="_blank" rel="noopener noreferrer">Download the latest APK ↓</a></p>
+
+    <h2>Install in 3 steps</h2>
+    <ol class="steps">
+      <li><strong>Download the APK.</strong> Open the <a href="https://github.com/Ai-Chetan/Aura-Music/releases" target="_blank" rel="noopener noreferrer">releases page</a> on your phone and download the newest <code>.apk</code> file (the Android app file).</li>
+      <li><strong>Allow the install.</strong> Android will ask you to allow installs from your browser (or file manager) once — this is normal for direct APK downloads.</li>
+      <li><strong>Open Aura and take the tour.</strong> A skippable first-launch tour runs over the real UI, with starter tracks you can download in the background.</li>
+    </ol>
+
+    <div class="note"><strong>Updates:</strong> Aura will not update itself silently. Check the releases page (or Watch the repo) for new versions and changelogs, then install the new APK over the old one — your library and tags are kept.</div>
+
+    <h2>Before you install</h2>
+    <details open>
+      <summary>Is Aura really free?</summary>
+      <p>Yes — completely free, forever. No premium tier, no locked features, no paywalls, no ads. The code is MIT-licensed and open source on <a href="https://github.com/Ai-Chetan/Aura-Music" target="_blank" rel="noopener noreferrer">GitHub</a> — contributors welcome (<a href="https://github.com/Ai-Chetan/Aura-Music/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">how to contribute</a>).</p>
+    </details>
+    <details>
+      <summary>Which Android versions are supported?</summary>
+      <p>Android 8 and newer. If your device is older, the app file won't install — check <a href="../android-music-player/">Android details</a>.</p>
+    </details>
+    <details>
+      <summary>Is the APK safe?</summary>
+      <p>The APK is built in the open from the public source. Aura requests only Internet, foreground media playback, and (on Android 13+) notifications — see the <a href="../privacy/">privacy notes</a>. Only download from the official releases page linked here.</p>
+    </details>
+    <details>
+      <summary>A note on saving audio</summary>
+      <p>Aura is a private, on-device player — not a music provider. It doesn't own any songs and claims no rights over them: all music and artwork belong to their respective artists, labels, and rights holders. Aura only keeps what <em>you</em> choose on your phone for offline listening, with no sharing built in. Only keep content you own or have permission to keep, and never redistribute downloaded files.</p>
+    </details>
+    <details>
+      <summary>Who owns the music? Who made Aura?</summary>
+      <p>No songs belong to Aura — every right stays with its respective owner (YouTube™ is a trademark of Google LLC). Aura is developed by <a href="https://github.com/Ai-Chetan" target="_blank" rel="noopener noreferrer">Ai-Chetan</a> for the open-source community under MIT.</p>
+    </details>
+
+    <h2>What's next after installing?</h2>
+    <p>Skim the <a href="../features/">features tour</a>, learn <a href="../blog/organize-music-with-tags/">how tags replace playlists</a>, or browse the <a href="../faq/">full FAQ</a>.</p>
+    <p>Aura is open source under MIT, developed by <a href="https://github.com/Ai-Chetan" target="_blank" rel="noopener noreferrer">Ai-Chetan</a> for the open-source community — <a href="https://github.com/Ai-Chetan/Aura-Music" target="_blank" rel="noopener noreferrer">browse the source</a> and <a href="https://github.com/Ai-Chetan/Aura-Music/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">contributors are welcome</a>.</p>
+  </main>
+
+  <footer>
+    <span>© 2026 Aura · MIT licence · Open source — <a href="https://github.com/Ai-Chetan/Aura-Music/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">contributors welcome</a></span>
+    <nav aria-label="Footer">
+      <a href="../">Home</a><a href="../features/">Features</a><a href="../offline-music-player/">Offline player</a><a href="../faq/">FAQ</a><a href="../privacy/">Privacy</a><a href="../blog/">Blog</a>
+    </nav>
+    <small style="flex-basis:100%;font-size:.78rem;line-height:1.6">Aura does not own, host, or license any music. All songs, artwork &amp; trademarks belong to their respective artists, labels &amp; rights holders — YouTube™ is a trademark of Google LLC. Private listening only; please keep content you own or have permission to store. Developed by <a href="https://github.com/Ai-Chetan" target="_blank" rel="noopener noreferrer">Ai-Chetan</a> for the open-source community.</small>
+  </footer>
+</body>
+</html>

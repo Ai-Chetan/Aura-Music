@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Aura Blog — Guides to Offline Music, Tags &amp; Local Libraries</title>
+  <meta name="description" content="Practical guides from the Aura project: choosing an offline music player for Android, organizing music with tags, and listening offline. No fluff, no keyword farms.">
+  <link rel="canonical" href="https://listen-aura.vercel.app/blog/">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Aura Music">
+  <meta property="og:url" content="https://listen-aura.vercel.app/blog/">
+  <meta property="og:title" content="Aura Blog — Guides to Offline Music, Tags &amp; Local Libraries">
+  <meta property="og:description" content="Practical guides: choosing an offline music player, organizing music with tags, listening offline on Android.">
+  <meta property="og:image" content="https://listen-aura.vercel.app/screenshots/01-home-continue-listening-top-hits.webp">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Aura Blog — Guides to Offline Music, Tags &amp; Local Libraries">
+  <meta name="twitter:description" content="Practical guides: choosing an offline music player, organizing music with tags, listening offline on Android.">
+  <meta name="twitter:image" content="https://listen-aura.vercel.app/screenshots/01-home-continue-listening-top-hits.webp">
+  <link rel="icon" type="image/png" href="../aura-icon.png">
+  <link rel="apple-touch-icon" href="../app-icon.png">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Blog",
+    "name": "Aura Blog",
+    "url": "https://listen-aura.vercel.app/blog/",
+    "description": "Practical guides to offline music, tags and local libraries on Android."
+  }
+  </script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box}
+    :root{--paper:#EDF2F6;--card:#fff;--ink:#06121D;--soft:#23394C;--muted:#52697E;--accent:#0B7FC4;--accent-deep:#075E92;--line:rgba(6,18,29,.12);--r:18px;--font:"Inter",ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif}
+    html{background:var(--paper)}
+    body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--font);line-height:1.65;font-size:1.02rem;-webkit-font-smoothing:antialiased}
+    .nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px clamp(18px,4vw,56px);background:rgba(237,242,246,.85);border-bottom:1px solid var(--line);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+    .brand{display:inline-flex;align-items:center;gap:10px;font-weight:700;font-size:1.1rem}
+    .brand img{width:30px;height:30px;border-radius:9px}
+    .brand img.brand-lockup{width:auto;height:42px;border-radius:0;background:none}
+    .nav nav{display:flex;flex-wrap:wrap;gap:2px 4px;align-items:center}
+    .nav nav a{padding:8px 12px;border-radius:999px;font-size:.86rem;font-weight:560;color:var(--muted)}
+    .nav nav a:hover{color:var(--ink);background:rgba(6,18,29,.05)}
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:999px;font-weight:620;font-size:.8rem;background:var(--ink);color:#fff;text-decoration:none}
+    .wrap{width:min(880px,100%);margin:0 auto;padding:clamp(36px,6vw,72px) clamp(20px,4vw,40px) 80px}
+    .crumbs{font-size:.8rem;color:var(--muted);margin-bottom:18px}
+    .crumbs a{color:var(--accent-deep)}
+    h1{font-size:clamp(2.1rem,5.4vw,3.4rem);line-height:1.02;letter-spacing:-.04em;margin:0 0 16px}
+    .lede{font-size:clamp(1.05rem,1.6vw,1.25rem);color:var(--muted);max-width:60ch;margin:0 0 32px}
+    .posts{display:grid;gap:16px}
+    .post{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:clamp(22px,3vw,32px)}
+    .post .kicker{font-size:.75rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-deep);margin-bottom:8px}
+    .post h2{margin:0 0 8px;font-size:clamp(1.3rem,2.6vw,1.7rem);letter-spacing:-.02em}
+    .post h2 a{color:var(--ink);text-decoration:none}
+    .post h2 a:hover{color:var(--accent-deep)}
+    .post p{margin:0 0 12px;color:var(--soft)}
+    .post time{font-size:.82rem;color:var(--muted)}
+    footer{border-top:1px solid var(--line);padding:32px clamp(20px,4vw,56px);display:flex;flex-wrap:wrap;gap:8px 28px;justify-content:space-between;font-size:.85rem;color:var(--muted)}
+    footer a{color:var(--muted);margin-right:16px}
+    a{color:var(--accent-deep)}
+  </style>
+</head>
+<body>
+  <header class="nav">
+    <a class="brand" href="../" aria-label="Aura home"><img class="brand-lockup" src="../aura-nav.png" alt="Aura" width="2172" height="724" decoding="async"></a>
+    <nav aria-label="Primary">
+      <a href="../features/">Features</a>
+      <a href="../offline-music-player/">Offline player</a>
+      <a href="../android-music-player/">Android player</a>
+      <a href="../download/">Download</a>
+      <a href="../faq/">FAQ</a>
+      <a href="../blog/">Blog</a>
+    </nav>
+    <a class="btn" href="https://github.com/Ai-Chetan/Aura-Music/releases" target="_blank" rel="noopener noreferrer">Get Aura</a>
+  </header>
+
+  <main class="wrap">
+    <p class="crumbs"><a href="../">Home</a> · Blog</p>
+    <h1>Guides, not growth hacks.</h1>
+    <p class="lede">Short, practical pieces on offline listening and keeping a local library — the same problems Aura is built to solve. Aura itself is <a href="https://github.com/Ai-Chetan/Aura-Music" target="_blank" rel="noopener noreferrer">open source under MIT</a> — contributors welcome.</p>
+    <div class="posts">
+      <article class="post">
+        <p class="kicker">Buying guide</p>
+        <h2><a href="best-offline-music-player-android/">Best offline music players for Android in 2026: what to actually compare</a></h2>
+        <p>Forget “top 10” listicles. Here are the six criteria that decide whether an offline player stays installed — and where Aura fits.</p>
+        <time datetime="2026-09-01">September 2026 · 6 min read</time>
+      </article>
+      <article class="post">
+        <p class="kicker">Organization</p>
+        <h2><a href="organize-music-with-tags/">How to organize your music with tags instead of playlists</a></h2>
+        <p>Playlists force every song into one box. Tags let one track live everywhere it belongs — with mix-and-match filters that stay fast at 2,000+ songs.</p>
+        <time datetime="2026-09-08">September 2026 · 5 min read</time>
+      </article>
+      <article class="post">
+        <p class="kicker">How-to</p>
+        <h2><a href="offline-music-guide/">How to listen to music offline on Android</a></h2>
+        <p>Downloads vs streaming bookmarks, storage permissions, battery, backups — a plain-English checklist for a library that survives flights and dead zones.</p>
+        <time datetime="2026-09-15">September 2026 · 5 min read</time>
+      </article>
+    </div>
+  </main>
+
+  <footer>
+    <span>© 2026 Aura · MIT licence · Open source — <a href="https://github.com/Ai-Chetan/Aura-Music/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">contributors welcome</a></span>
+    <nav aria-label="Footer">
+      <a href="../">Home</a><a href="../features/">Features</a><a href="../download/">Download</a><a href="../faq/">FAQ</a><a href="../privacy/">Privacy</a>
+    </nav>
+    <small style="flex-basis:100%;font-size:.78rem;line-height:1.6">Aura does not own, host, or license any music. All songs, artwork &amp; trademarks belong to their respective artists, labels &amp; rights holders — YouTube™ is a trademark of Google LLC. Private listening only; please keep content you own or have permission to store. Developed by <a href="https://github.com/Ai-Chetan" target="_blank" rel="noopener noreferrer">Ai-Chetan</a> for the open-source community.</small>
+  </footer>
+</body>
+</html>

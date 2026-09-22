@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>How to Organize Your Music With Tags Instead of Playlists | Aura</title>
+  <meta name="description" content="Playlists force every song into one box. Learn how many-to-many music tags with AND/OR filters keep a 2,000-track library navigable — with Aura's tag system as the worked example.">
+  <link rel="canonical" href="https://listen-aura.vercel.app/blog/organize-music-with-tags/">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Aura Music">
+  <meta property="og:url" content="https://listen-aura.vercel.app/blog/organize-music-with-tags/">
+  <meta property="og:title" content="How to Organize Your Music With Tags Instead of Playlists">
+  <meta property="og:description" content="Tags let one track live everywhere it belongs — with AND/OR filters that stay fast at 2,000+ songs.">
+  <meta property="og:image" content="https://listen-aura.vercel.app/screenshots/08-library-downloaded-tag-filters.webp">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="How to Organize Your Music With Tags Instead of Playlists">
+  <meta name="twitter:description" content="Tags let one track live everywhere it belongs — with AND/OR filters that stay fast at 2,000+ songs.">
+  <meta name="twitter:image" content="https://listen-aura.vercel.app/screenshots/08-library-downloaded-tag-filters.webp">
+  <link rel="icon" type="image/png" href="../../aura-icon.png">
+  <link rel="apple-touch-icon" href="../../app-icon.png">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "How to organize your music with tags instead of playlists",
+    "description": "Many-to-many music tags with AND/OR filters keep a large local library navigable.",
+    "datePublished": "2026-09-08",
+    "author": { "@type": "Organization", "name": "Aura Music", "url": "https://listen-aura.vercel.app/" },
+    "mainEntityOfPage": "https://listen-aura.vercel.app/blog/organize-music-with-tags/"
+  }
+  </script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box}
+    :root{--paper:#EDF2F6;--card:#fff;--ink:#06121D;--soft:#23394C;--muted:#52697E;--accent:#0B7FC4;--accent-deep:#075E92;--line:rgba(6,18,29,.12);--r:18px;--font:"Inter",ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif}
+    html{background:var(--paper)}
+    body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--font);line-height:1.7;font-size:1.03rem;-webkit-font-smoothing:antialiased}
+    .nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px clamp(18px,4vw,56px);background:rgba(237,242,246,.85);border-bottom:1px solid var(--line);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+    .brand{display:inline-flex;align-items:center;gap:10px;font-weight:700;font-size:1.1rem}
+    .brand img{width:30px;height:30px;border-radius:9px}
+    .brand img.brand-lockup{width:auto;height:42px;border-radius:0;background:none}
+    .nav nav{display:flex;flex-wrap:wrap;gap:2px 4px;align-items:center}
+    .nav nav a{padding:8px 12px;border-radius:999px;font-size:.86rem;font-weight:560;color:var(--muted)}
+    .nav nav a:hover{color:var(--ink);background:rgba(6,18,29,.05)}
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:999px;font-weight:620;font-size:.8rem;background:var(--ink);color:#fff;text-decoration:none}
+    article{width:min(760px,100%);margin:0 auto;padding:clamp(36px,6vw,72px) clamp(20px,4vw,40px) 80px}
+    .crumbs{font-size:.8rem;color:var(--muted);margin-bottom:18px}
+    .crumbs a{color:var(--accent-deep)}
+    h1{font-size:clamp(2rem,5vw,3rem);line-height:1.05;letter-spacing:-.035em;margin:0 0 12px;max-width:24ch}
+    time{font-size:.85rem;color:var(--muted)}
+    .lede{font-size:1.15rem;color:var(--muted);margin:14px 0 26px}
+    h2{font-size:1.5rem;letter-spacing:-.02em;margin:38px 0 8px}
+    p{margin:0 0 14px;color:var(--soft)}
+    ul,ol{margin:12px 0 18px;padding-left:22px;display:grid;gap:8px;color:var(--soft)}
+    figure{margin:26px 0;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+    figure img{width:100%;max-width:360px;margin:0 auto;height:auto;border-radius:12px;display:block;background:#0a1826}
+    figcaption{text-align:center;font-size:.82rem;color:var(--muted);margin-top:10px}
+    .cta{margin-top:44px;background:#04101A;color:#EDF4F9;border-radius:22px;padding:clamp(28px,4vw,44px);text-align:center}
+    .cta h2{color:#fff;margin:0 0 10px}
+    .cta p{color:#92A8BB;max-width:52ch;margin:0 auto 22px}
+    .cta .btn{background:#fff;color:#06121D;font-size:.95rem;padding:12px 24px}
+    footer{border-top:1px solid var(--line);padding:32px clamp(20px,4vw,56px);display:flex;flex-wrap:wrap;gap:8px 28px;justify-content:space-between;font-size:.85rem;color:var(--muted)}
+    footer a{color:var(--muted);margin-right:16px}
+    a{color:var(--accent-deep)}
+  </style>
+</head>
+<body>
+  <header class="nav">
+    <a class="brand" href="../../" aria-label="Aura home"><img class="brand-lockup" src="../../aura-nav.png" alt="Aura" width="2172" height="724" decoding="async"></a>
+    <nav aria-label="Primary">
+      <a href="../../features/">Features</a>
+      <a href="../../offline-music-player/">Offline player</a>
+      <a href="../../download/">Download</a>
+      <a href="../../faq/">FAQ</a>
+      <a href="../../blog/">Blog</a>
+    </nav>
+    <a class="btn" href="https://github.com/Ai-Chetan/Aura-Music/releases" target="_blank" rel="noopener noreferrer">Get Aura</a>
+  </header>
+
+  <article>
+    <p class="crumbs"><a href="../../">Home</a> · <a href="../">Blog</a> · Organization</p>
+    <h1>How to organize your music with tags instead of playlists</h1>
+    <time datetime="2026-09-08">September 2026 · 5 min read</time>
+    <p class="lede">A song can be <em>gym</em> and <em>90s</em> and <em>acoustic</em> at once — but a playlist forces it into one box. Tags don't.</p>
+
+    <h2>The playlist problem</h2>
+    <p>Playlists are single-membership: “Workout Mix” duplicates “90s Hits” duplicates “Acoustic Morning”, and every copy drifts out of sync. At a few hundred tracks you stop trusting your own library — not because the music is bad, but because the filing system lies.</p>
+
+    <h2>Tags are many-to-many</h2>
+    <p>A tag system lets one track carry unlimited labels. In <a href="../../features/">Aura</a>, a song can be <em>gym + 90s + remaster</em> simultaneously, and:</p>
+    <ul>
+      <li><strong>AND narrows:</strong> <em>gym AND 90s</em> — only tracks with both.</li>
+      <li><strong>OR widens:</strong> <em>gym OR run</em> — everything for moving.</li>
+      <li><strong>Search stacks:</strong> filter by tags, then search title/artist inside the result.</li>
+      <li><strong>Sorts persist:</strong> six orders — recent, oldest, title A–Z/Z–A, longest/shortest.</li>
+    </ul>
+    <figure>
+      <img src="../../screenshots/08-library-downloaded-tag-filters.webp" alt="Aura library filtered by several tags at once" width="640" height="1443" loading="lazy" decoding="async">
+      <figcaption>One song, many tags, zero duplicates.</figcaption>
+    </figure>
+
+    <h2>A starter system that works</h2>
+    <ol>
+      <li><strong>Energy first:</strong> <em>focus, gym, sleep, drive, party</em> — how you actually pick music.</li>
+      <li><strong>Then texture:</strong> <em>acoustic, live, instrumental, remaster</em>.</li>
+      <li><strong>Cap it at ~12 tags.</strong> More tags than that and filtering gets slower than scrolling.</li>
+      <li><strong>Tag on save.</strong> Two seconds at download time beats a weekend of re-filing.</li>
+    </ol>
+
+    <h2>Why this matters offline</h2>
+    <p>Offline libraries can't lean on search-as-a-service — there is no cloud index to query. Local tags, local filters and local sort are what keep a 2,000-track <a href="../../offline-music-player/">offline vault</a> navigable in airplane mode. Aura's shuffle play even respects your active filters, so <em>gym AND 90s</em> shuffles exactly that.</p>
+
+    <div class="cta">
+      <h2>Try tags on your own library.</h2>
+      <p>Free forever · No ads · No account. Tag your first songs in minutes.</p>
+      <p><a class="btn" href="../../download/">Download Aura</a></p>
+    </div>
+  </article>
+
+  <footer>
+    <span>© 2026 Aura · MIT licence · Open source — <a href="https://github.com/Ai-Chetan/Aura-Music/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">contributors welcome</a></span>
+    <nav aria-label="Footer">
+      <a href="../../">Home</a><a href="../../features/">Features</a><a href="../../download/">Download</a><a href="../../faq/">FAQ</a><a href="../">Blog</a>
+    </nav>
+    <small style="flex-basis:100%;font-size:.78rem;line-height:1.6">Aura does not own, host, or license any music. All songs, artwork &amp; trademarks belong to their respective artists, labels &amp; rights holders — YouTube™ is a trademark of Google LLC. Private listening only; please keep content you own or have permission to store. Developed by <a href="https://github.com/Ai-Chetan" target="_blank" rel="noopener noreferrer">Ai-Chetan</a> for the open-source community.</small>
+  </footer>
+</body>
+</html>

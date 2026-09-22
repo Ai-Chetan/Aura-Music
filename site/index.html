@@ -6,25 +6,80 @@
   <meta name="theme-color" content="#EDF2F6" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#04101A" media="(prefers-color-scheme: dark)">
   <meta name="color-scheme" content="light">
-  <meta name="description" content="Aura is a private, on-device music player for Android. Search any song, stream it instantly or save the best available audio offline — organised with tags, carried by a radio that learns you. No account, no cloud.">
-  <title>Aura — Your music, kept by you</title>
+  <title>Aura Music — Modern Offline Music Player for Android</title>
+  <meta name="description" content="Aura is a lightweight, free offline music player for Android with no ads, no accounts and no tracking. Save the best available audio, organize songs with tags, shuffle and loop queues, and control playback from the lock screen.">
+  <link rel="canonical" href="https://listen-aura.vercel.app/">
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
+  <meta name="author" content="Ai-Chetan — Aura Music">
+  <meta name="keywords" content="aura music, aura music player, offline music player android, local music player android, music player without ads, minimal music player android">
 
-  <link rel="icon" type="image/png" href="aura-icon.png">
-  <link rel="apple-touch-icon" href="app-icon.png">
-  <link rel="canonical" href="https://github.com/Ai-Chetan/Aura-Music">
+  <link rel="icon" type="image/x-icon" href="aura-favicon.ico">
+  <link rel="icon" type="image/x-icon" href="aura.ico">
+  <link rel="manifest" href="manifest.webmanifest">
 
   <meta property="og:type" content="website">
-  <meta property="og:title" content="Aura — Your music, kept by you">
-  <meta property="og:description" content="A private, on-device music player for Android.">
-  <meta property="og:image" content="app-icon.png">
+  <meta property="og:site_name" content="Aura Music">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:url" content="https://listen-aura.vercel.app/">
+  <meta property="og:title" content="Aura Music — Modern Offline Music Player for Android">
+  <meta property="og:description" content="A lightweight, free offline music player for Android. No ads, no accounts, no tracking — tags, queues, radio and lock-screen controls, all on device.">
+  <meta property="og:image" content="https://listen-aura.vercel.app/screenshots/01-home-continue-listening-top-hits.webp">
+  <meta property="og:image:alt" content="Aura home screen with Continue listening, top hits and For You picks">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Aura — Your music, kept by you">
-  <meta name="twitter:description" content="A private, on-device music player for Android.">
-  <meta name="twitter:image" content="app-icon.png">
+  <meta name="twitter:title" content="Aura Music — Modern Offline Music Player for Android">
+  <meta name="twitter:description" content="A lightweight, free offline music player for Android. No ads, no accounts, no tracking.">
+  <meta name="twitter:image" content="https://listen-aura.vercel.app/screenshots/01-home-continue-listening-top-hits.webp">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "@id": "https://listen-aura.vercel.app/#app",
+        "name": "Aura Music",
+        "applicationCategory": "MultimediaApplication",
+        "applicationSubCategory": "MusicPlayer",
+        "operatingSystem": "Android",
+        "isAccessibleForFree": true,
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "description": "Aura is a lightweight, free offline music player for Android. Save the best available audio for offline listening, organize songs with tags, manage queues with shuffle and repeat, and control playback from the lock screen. No accounts, no ads, no analytics.",
+        "url": "https://listen-aura.vercel.app/",
+        "downloadUrl": "https://github.com/Ai-Chetan/Aura-Music/releases",
+        "image": "https://listen-aura.vercel.app/screenshots/01-home-continue-listening-top-hits.webp",
+        "author": { "@type": "Organization", "name": "Aura Music", "url": "https://github.com/Ai-Chetan/Aura-Music" },
+        "creator": { "@type": "Person", "name": "Ai-Chetan", "url": "https://github.com/Ai-Chetan" },
+        "license": "https://opensource.org/licenses/MIT",
+        "disclaimer": "Aura does not own, host or license any music. All songs, artwork and trademarks belong to their respective owners."
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://listen-aura.vercel.app/#website",
+        "url": "https://listen-aura.vercel.app/",
+        "name": "Aura Music",
+        "inLanguage": "en"
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://listen-aura.vercel.app/#faq",
+        "mainEntity": [
+          { "@type": "Question", "name": "Is Aura an offline music player?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Aura is designed around locally stored audio and offline playback. Saved songs keep playing with no signal and no sign-in." } },
+          { "@type": "Question", "name": "Is Aura available for Android?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Aura is an Android music player (Android 8 and newer) distributed as a free app file (APK) on GitHub Releases." } },
+          { "@type": "Question", "name": "Does Aura have ads, accounts or tracking?", "acceptedAnswer": { "@type": "Answer", "text": "No. Aura has no accounts, no ads and no tracking of any kind. Your files, tags and listening history stay on your device." } },
+          { "@type": "Question", "name": "How does Aura organize music with tags?", "acceptedAnswer": { "@type": "Answer", "text": "Each song can carry many tags. Mix and match tags to filter, search by title or artist, and sort six ways — an alternative to rigid single playlists." } },
+          { "@type": "Question", "name": "Does Aura support lock-screen controls?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. You get notification and lock-screen controls, plus queue, shuffle and repeat." } },
+          { "@type": "Question", "name": "Is Aura free and open source?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Aura is free forever and open source under the MIT licence. The source is on GitHub and contributors are welcome." } },
+          { "@type": "Question", "name": "Who owns the music in Aura?", "acceptedAnswer": { "@type": "Answer", "text": "Aura does not own, host or license any music. All songs, artwork and trademarks belong to their respective artists, labels and rights holders. Aura is a private on-device player only — please keep content you own or have permission to store." } },
+          { "@type": "Question", "name": "Who made Aura?", "acceptedAnswer": { "@type": "Answer", "text": "Aura is developed by Ai-Chetan (github.com/Ai-Chetan) for the open-source community under the MIT licence." } }
+        ]
+      }
+    ]
+  }
+  </script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preload" as="image" href="screenshots/01-home-continue-listening-top-hits.png">
+  <link rel="preload" as="image" type="image/webp" fetchpriority="high" href="screenshots/01-home-continue-listening-top-hits.webp">
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..800&display=swap" rel="stylesheet">
 
   <script>
@@ -174,7 +229,7 @@
     .skip:focus-visible { transform: none; }
 
     /* Anchored sections clear the fixed header */
-    #ownership, #features, #privacy { scroll-margin-top: calc(var(--nav-h) + 12px); }
+    #ownership, #features, #faq, #privacy { scroll-margin-top: calc(var(--nav-h) + 12px); }
     #top { scroll-margin-top: 0; }
 
     .lede {
@@ -226,24 +281,35 @@
     .preloader {
       position: fixed; inset: 0; z-index: 2500;
       display: grid; place-items: center;
-      background: var(--night); color: var(--on-dark);
+      overflow: hidden;
+      background: #fff; color: var(--ink);
       transition: opacity .6s var(--ease-out), visibility 0s .6s;
     }
     .preloader.is-done { opacity: 0; visibility: hidden; }
     html:not(.js) .preloader { display: none; }
 
     .preloader-mark {
-      display: flex; align-items: center; gap: 14px;
-      font-size: 1.375rem; font-weight: 700; letter-spacing: var(--track-tight);
+      display: grid; place-items: center;
+      animation: preloader-zoom 1.2s cubic-bezier(.2,.7,.3,1) forwards;
+      will-change: transform;
     }
-    .preloader-mark img,
+    .preloader-mark img {
+      width: min(220px, 56vw); height: auto;
+    }
     .preloader-mark .brand-fallback {
-      width: 44px; height: 44px; border-radius: 13px; object-fit: cover;
-      background: #060A0F; font-size: 1rem;
+      width: 52px; height: 52px; border-radius: 15px;
+      display: grid; place-items: center;
+      background: linear-gradient(150deg, var(--accent-bright), var(--accent-deep));
+      color: #fff; font-weight: 780; font-size: 1.25rem;
+    }
+    @keyframes preloader-zoom {
+      0%   { transform: scale(3); opacity: 1; }
+      60%  { opacity: 1; }
+      100% { transform: scale(8); opacity: 0; }
     }
     .preloader-line {
       position: absolute; left: 0; right: 0; bottom: 0;
-      height: 2px; background: rgba(237,244,249,.09);
+      height: 2px; background: rgba(6,18,29,.08);
     }
     .preloader-line i {
       display: block; height: 100%; width: 0;
@@ -291,6 +357,9 @@
       width: 32px; height: 32px; flex: none;
       border-radius: 10px; object-fit: cover; background: #060A0F;
       box-shadow: 0 2px 10px -4px rgba(6,18,29,.5);
+    }
+    .brand-lockup {
+      height: 42px; width: auto; flex: none; display: block;
     }
     .brand-fallback {
       display: grid; place-items: center; flex: none;
@@ -909,8 +978,8 @@
       opacity: 0;
       text-shadow: 0 2px 30px rgba(3,9,15,.7);
     }
-    .story.is-live .chapter:nth-child(odd)  { left: clamp(24px, 6vw, 132px); }
-    .story.is-live .chapter:nth-child(even) { right: clamp(24px, 6vw, 132px); }
+    .story.is-live .chapter:nth-child(odd)  { right: clamp(24px, 6vw, 132px); }
+    .story.is-live .chapter:nth-child(even) { left: clamp(24px, 6vw, 132px); }
     .story.is-live .chapter > * { will-change: transform; }
     .story.is-live .chapter p { margin-inline: 0; }
     .story.is-live .chapter ul { justify-content: flex-start; }
@@ -1131,46 +1200,123 @@
     }
 
     /* =====================================================================
-       CLOSING CTA
+       FAQ — indexable, crawlable, no-JS friendly
        ===================================================================== */
-    .closing {
-      position: relative; overflow: hidden;
-      min-height: 84svh;
-      padding: clamp(96px, 13vw, 184px) var(--gutter);
-      display: grid; place-items: center; text-align: center;
+    .faq {
+      padding: var(--section-y) var(--gutter);
+      background: var(--paper-warm);
+      border-top: 1px solid var(--line);
+      scroll-margin-top: calc(var(--nav-h) + 12px);
+    }
+    .faq__inner { width: min(1440px, 100%); margin: 0 auto; }
+    .faq__head {
+      display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+      gap: clamp(24px, 4vw, 72px); align-items: end;
+      margin-bottom: clamp(32px, 4vw, 56px);
+    }
+    .faq__head h2 {
+      font-size: var(--fs-h2); font-weight: 660;
+      line-height: .98; letter-spacing: var(--track-mega);
+      max-width: 14ch;
+    }
+    .faq__head p { color: var(--muted); font-size: var(--fs-lede); max-width: 46ch; }
+    .faq__list {
+      display: grid; gap: 0;
+      border-top: 1px solid var(--line-strong);
+    }
+    .faq__list details { border-bottom: 1px solid var(--line-strong); }
+    .faq__list summary {
+      list-style: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: space-between; gap: 20px;
+      padding: 22px 4px;
+      font-size: 1.0625rem; font-weight: 600; letter-spacing: -.01em;
+    }
+    .faq__list summary::-webkit-details-marker { display: none; }
+    .faq__list summary::after {
+      content: "+"; flex: none;
+      display: grid; place-items: center;
+      width: 30px; height: 30px; border-radius: 50%;
+      border: 1px solid var(--line-strong);
+      font-weight: 400; color: var(--muted);
+      transition: transform var(--d-base) var(--ease), background var(--d-fast), color var(--d-fast);
+    }
+    .faq__list details[open] summary::after { transform: rotate(45deg); background: var(--ink); color: #fff; border-color: var(--ink); }
+    .faq__list details p {
+      padding: 0 4px 24px; max-width: 72ch;
+      color: var(--ink-soft); line-height: 1.65;
+    }
+    .faq__list details p a { color: var(--accent-deep); text-decoration: underline; text-underline-offset: 3px; }
+    .faq__more { margin-top: 26px; color: var(--muted); font-size: var(--fs-small); }
+    .faq__more a { color: var(--accent-deep); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+
+    /* =====================================================================
+       OPEN SOURCE — contributors welcome
+       ===================================================================== */
+    .opensource {
+      padding: var(--section-y) var(--gutter);
       background: var(--paper);
+      border-top: 1px solid var(--line);
+      scroll-margin-top: calc(var(--nav-h) + 12px);
     }
-    .closing__aurora {
-      position: absolute; inset: 0; pointer-events: none;
-      background:
-        radial-gradient(46vw 46vw at 50% 8%,  rgba(56,189,248,.34), transparent 62%),
-        radial-gradient(52vw 52vw at 14% 88%, rgba(125,211,252,.3), transparent 62%),
-        radial-gradient(44vw 44vw at 88% 78%, rgba(11,127,196,.2), transparent 62%);
-      background-size: 180% 180%;
-      animation: aurora-shift 22s var(--ease-in-out) infinite alternate;
+    .opensource__inner {
+      width: min(1440px, 100%); margin: 0 auto;
+      display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+      gap: clamp(24px, 4vw, 72px); align-items: center;
     }
-    @keyframes aurora-shift {
-      from { background-position: 0% 50%; }
-      to   { background-position: 100% 50%; }
+    .opensource__eyebrow {
+      display: inline-flex; align-items: center; gap: 10px;
+      margin-bottom: 22px; padding: 8px 15px;
+      border: 1px solid var(--line-strong); border-radius: var(--r-pill);
+      background: var(--paper-raised);
+      font-size: var(--fs-small); font-weight: 620; color: var(--ink-soft);
     }
-    .closing__inner { position: relative; max-width: 22ch; }
-    .closing .brand-mark, .closing .brand-fallback {
-      width: 72px; height: 72px; margin: 0 auto 30px; border-radius: 22px;
-      box-shadow: 0 34px 62px -26px rgba(6,18,29,.55);
-      animation: hover-float 7s var(--ease-in-out) infinite;
+    .opensource__eyebrow i {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--accent); flex: none;
     }
-    .closing h2 {
-      margin-bottom: 24px;
-      font-size: clamp(3.25rem, 9.6vw, 9rem);
-      font-weight: 700; line-height: .86; letter-spacing: var(--track-mega);
+    .opensource h2 {
+      margin-bottom: 20px; max-width: 16ch;
+      font-size: var(--fs-h2); font-weight: 660;
+      line-height: .98; letter-spacing: var(--track-mega);
     }
-    .closing p {
-      margin: 0 auto 36px; max-width: 46ch;
-      color: var(--ink-soft); font-size: var(--fs-lede); line-height: 1.55;
+    .opensource h2 em { font-style: normal; color: var(--accent); }
+    .opensource__copy > p { color: var(--muted); font-size: var(--fs-lede); max-width: 48ch; }
+    .opensource__copy > p a { color: var(--accent-deep); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+    .opensource__actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+    .opensource__meta {
+      margin-top: 22px; color: var(--muted-2);
+      font-size: var(--fs-small); font-weight: 560;
     }
-    .closing .actions { justify-content: center; }
-    .closing .facts { justify-content: center; margin-top: 34px; color: var(--ink-soft); }
-    .closing .facts li::before { background: var(--ink); opacity: .5; }
+    .opensource__card {
+      border: 1px solid var(--line); border-radius: var(--r-lg);
+      background: var(--paper-raised);
+      padding: clamp(24px, 2.6vw, 36px);
+      box-shadow: 0 24px 60px -40px rgba(6,18,29,.35);
+    }
+    .opensource__card h3 {
+      margin-bottom: 14px;
+      font-size: 1.125rem; font-weight: 660; letter-spacing: var(--track-tight);
+    }
+    .opensource__card ol { list-style: none; display: grid; gap: 14px; }
+    .opensource__card ol li {
+      display: grid; grid-template-columns: 30px 1fr; gap: 12px; align-items: start;
+      color: var(--ink-soft); font-size: var(--fs-body);
+    }
+    .opensource__card ol li b {
+      display: grid; place-items: center;
+      width: 30px; height: 30px; border-radius: 50%;
+      background: var(--ink); color: #fff;
+      font-size: .8125rem; font-weight: 700;
+    }
+    .opensource__card ol li a { color: var(--accent-deep); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+    .opensource__card > p { margin-top: 18px; font-size: var(--fs-small); color: var(--muted); }
+    .opensource__card > p a { color: var(--accent-deep); font-weight: 600; }
+    @media (max-width: 980px) {
+      .opensource__inner { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 980px) {
+      .faq__head { grid-template-columns: 1fr; gap: 20px; }
+    }
 
     /* =====================================================================
        FOOTER
@@ -1181,12 +1327,13 @@
     }
     .footer__top {
       width: min(1440px, 100%); margin: 0 auto;
-      display: grid; grid-template-columns: minmax(0, 1.5fr) repeat(2, minmax(0, 1fr));
+      display: grid; grid-template-columns: minmax(0, 1.5fr) repeat(3, minmax(0, 1fr));
       gap: clamp(32px, 4vw, 64px);
       padding: clamp(56px, 7vw, 88px) var(--gutter) clamp(40px, 5vw, 56px);
       border-bottom: 1px solid var(--line-dark);
     }
     .footer__top .brand { color: var(--on-dark); margin-bottom: 18px; }
+    .footer__top .brand-lockup { width: min(324px, 100%); height: auto; filter: invert(1); }
     .footer__top p { max-width: 38ch; font-size: var(--fs-small); line-height: 1.7; }
     .footer__col h3 {
       margin-bottom: 18px; font-size: var(--fs-micro); font-weight: 700;
@@ -1231,8 +1378,8 @@
 
     @media (max-width: 1180px) {
       .story.is-live .chapter { width: min(360px, 33vw); }
-      .story.is-live .chapter:nth-child(odd)  { left: clamp(20px, 4vw, 64px); }
-      .story.is-live .chapter:nth-child(even) { right: clamp(20px, 4vw, 64px); }
+      .story.is-live .chapter:nth-child(odd)  { right: clamp(20px, 4vw, 64px); }
+      .story.is-live .chapter:nth-child(even) { left: clamp(20px, 4vw, 64px); }
       .story__rail button span { display: none; }
       .story__rail button i { width: 14px; }
       .chip--two { right: -3%; }
@@ -1325,9 +1472,6 @@
       .vault { width: min(380px, 100%); }
       .vault__item { font-size: var(--fs-micro); padding: 8px 12px; }
 
-      .closing { min-height: 78svh; }
-      .closing .brand-mark, .closing .brand-fallback { width: 62px; height: 62px; border-radius: 19px; }
-
       .footer__top { grid-template-columns: 1fr; gap: 34px; }
       .footer__bottom { flex-direction: column; }
       .to-top { width: 44px; height: 44px; }
@@ -1401,8 +1545,7 @@
 
   <div class="preloader" id="preloader" role="presentation" aria-hidden="true">
     <div class="preloader-mark">
-      <img src="app-icon.png" alt="" width="60" height="60" data-brand>
-      <span>Aura</span>
+      <img src="aura-nav.png" alt="" width="2172" height="724" fetchpriority="high" decoding="async" data-brand>
     </div>
     <div class="preloader-line"><i id="preloaderBar"></i></div>
   </div>
@@ -1415,13 +1558,13 @@
        ================================================================= -->
   <header class="nav" id="siteNav">
     <a class="brand" href="#top" aria-label="Aura, back to top">
-      <img class="brand-mark" src="app-icon.png" alt="" width="60" height="60" data-brand>
-      Aura
+      <img class="brand-lockup" src="aura-nav.png" alt="Aura" width="2172" height="724" fetchpriority="high" decoding="async" data-brand>
     </a>
 
     <nav class="nav-links" id="navLinks" aria-label="Primary">
       <a href="#experience">Experience</a>
       <a href="#features">Features</a>
+      <a href="#faq">FAQ</a>
       <a href="#privacy">Privacy</a>
       <span class="nav-divider" aria-hidden="true"></span>
       <a href="https://github.com/Ai-Chetan/Aura-Music" target="_blank" rel="noopener noreferrer">GitHub</a>
@@ -1441,14 +1584,15 @@
     <nav aria-label="Mobile">
       <a href="#experience" style="--i:0">Experience <span>How it works</span></a>
       <a href="#features"   style="--i:1">Features <span>Every detail</span></a>
-      <a href="#privacy"    style="--i:2">Privacy <span>On your device</span></a>
-      <a href="https://github.com/Ai-Chetan/Aura-Music" target="_blank" rel="noopener noreferrer" style="--i:3">GitHub <span>Source code</span></a>
+      <a href="#faq"        style="--i:2">FAQ <span>Answers</span></a>
+      <a href="#privacy"    style="--i:3">Privacy <span>On your device</span></a>
+      <a href="https://github.com/Ai-Chetan/Aura-Music" target="_blank" rel="noopener noreferrer" style="--i:4">GitHub <span>Source code</span></a>
     </nav>
     <a class="btn btn--primary" href="https://github.com/Ai-Chetan/Aura-Music/releases" target="_blank" rel="noopener noreferrer">
       <span class="btn__sheen" aria-hidden="true"></span>
       Download Aura <span class="btn__arrow" aria-hidden="true">↓</span>
     </a>
-    <p class="menu-panel__foot">Free and open source under the MIT licence.</p>
+    <p class="menu-panel__foot">Free and open source under the MIT licence — contributors welcome.</p>
   </div>
 
   <main id="main">
@@ -1467,7 +1611,7 @@
         <div class="hero-copy">
           <p class="hero-eyebrow fade-in" style="--delay:.15s">
             <span class="beacon" aria-hidden="true"></span>
-            A music player for Android that never phones home
+            Modern offline music player for Android · private by design
           </p>
 
           <h1 id="hero-title">
@@ -1476,9 +1620,9 @@
           </h1>
 
           <p class="lede fade-in" style="--delay:.5s">
-            Search any song and play it the second you tap it, or save the best available
-            audio to a library that lives on your phone — organised with your own tags and
-            carried by a radio that learns how you listen.
+            Search any song and play it the second you tap it, or save it in full quality
+            to a library that lives on your phone. You decide what plays — with your own
+            tags, zero ads, and nothing locked behind a paywall.
           </p>
 
           <div class="actions fade-in" style="--delay:.62s">
@@ -1493,8 +1637,8 @@
 
           <ul class="facts fade-in" style="--delay:.74s">
             <li>No account</li>
-            <li>No cloud library</li>
-            <li>Open source, MIT</li>
+            <li>No ads, no paywalls</li>
+            <li>Free &amp; open source</li>
           </ul>
         </div>
 
@@ -1507,14 +1651,14 @@
                aria-label="The Aura app running on an Android phone, cycling through the home screen, the now playing screen and a tag-filtered library.">
             <div class="phone">
               <div class="screen">
-                <img class="is-active" src="screenshots/01-home-continue-listening-top-hits.png"
-                     data-fallback="../docs/screenshots/01-home-continue-listening-top-hits.png"
+                <img class="is-active" src="screenshots/01-home-continue-listening-top-hits.webp"
+                    
                      alt="" fetchpriority="high" decoding="async">
-                <img src="screenshots/11-now-playing.png"
-                     data-fallback="../docs/screenshots/11-now-playing.png"
+                <img src="screenshots/11-now-playing.webp"
+                    
                      alt="" loading="lazy" decoding="async">
-                <img src="screenshots/08-library-downloaded-tag-filters.png"
-                     data-fallback="../docs/screenshots/08-library-downloaded-tag-filters.png"
+                <img src="screenshots/08-library-downloaded-tag-filters.webp"
+                    
                      alt="" loading="lazy" decoding="async">
               </div>
             </div>
@@ -1556,13 +1700,13 @@
          =============================================================== -->
     <div class="marquee" aria-hidden="true">
       <div class="marquee__track">
-        <span>No account</span><span>No cloud library</span><span>No ads, no analytics</span>
-        <span>Open source, MIT</span><span>Best available audio</span><span>Tags, not just playlists</span>
-        <span>Radio that runs on device</span><span>Background imports</span>
+        <span>No account</span><span>You choose what plays</span><span>No ads, ever</span>
+        <span>Completely free</span><span>Best available audio</span><span>Tags, not just playlists</span>
+        <span>Radio that learns your taste</span><span>Saves in the background</span>
         <span>Lock screen controls</span><span>Backup and restore</span>
-        <span>No account</span><span>No cloud library</span><span>No ads, no analytics</span>
-        <span>Open source, MIT</span><span>Best available audio</span><span>Tags, not just playlists</span>
-        <span>Radio that runs on device</span><span>Background imports</span>
+        <span>No account</span><span>You choose what plays</span><span>No ads, ever</span>
+        <span>Completely free</span><span>Best available audio</span><span>Tags, not just playlists</span>
+        <span>Radio that learns your taste</span><span>Saves in the background</span>
         <span>Lock screen controls</span><span>Backup and restore</span>
       </div>
     </div>
@@ -1597,7 +1741,7 @@
         </li>
         <li class="figure reveal" style="--delay:.07s">
           <b><span data-count="0">0</span></b>
-          <span>ads or analytics</span>
+          <span>ads, ever</span>
         </li>
         <li class="figure reveal" style="--delay:.14s">
           <b><span data-count="50">0</span></b>
@@ -1633,28 +1777,28 @@
         <div class="story__device">
           <div class="phone" id="storyPhone">
             <div class="screen">
-              <img class="is-active" src="screenshots/01-home-continue-listening-top-hits.png"
-                   data-fallback="../docs/screenshots/01-home-continue-listening-top-hits.png"
+              <img class="is-active" src="screenshots/01-home-continue-listening-top-hits.webp"
+                  
                    alt="Aura home screen with Continue listening, today's top hits and For You picks."
                    loading="lazy" decoding="async">
-              <img src="screenshots/15-search-results-ordinary.png"
-                   data-fallback="../docs/screenshots/15-search-results-ordinary.png"
+              <img src="screenshots/15-search-results-ordinary.webp"
+                  
                    alt="Search results in Aura, each with a play button and a save button."
                    loading="lazy" decoding="async">
-              <img src="screenshots/16-add-paste-link-preview.png"
-                   data-fallback="../docs/screenshots/16-add-paste-link-preview.png"
+              <img src="screenshots/16-add-paste-link-preview.webp"
+                  
                    alt="A pasted link previewed in Aura before the audio is saved."
                    loading="lazy" decoding="async">
-              <img src="screenshots/08-library-downloaded-tag-filters.png"
-                   data-fallback="../docs/screenshots/08-library-downloaded-tag-filters.png"
+              <img src="screenshots/08-library-downloaded-tag-filters.webp"
+                  
                    alt="The Aura library filtered by several tags at once."
                    loading="lazy" decoding="async">
-              <img src="screenshots/11-now-playing.png"
-                   data-fallback="../docs/screenshots/11-now-playing.png"
+              <img src="screenshots/11-now-playing.webp"
+                  
                    alt="The Aura now playing screen with artwork and playback controls."
                    loading="lazy" decoding="async">
-              <img src="screenshots/21-lock-screen-media-controls.png"
-                   data-fallback="../docs/screenshots/21-lock-screen-media-controls.png"
+              <img src="screenshots/21-lock-screen-media-controls.webp"
+                  
                    alt="Aura playback controls on the Android lock screen."
                    loading="lazy" decoding="async">
             </div>
@@ -1665,7 +1809,7 @@
           <article class="chapter">
             <p class="chapter__step"><i aria-hidden="true"></i>Step 01 · Home</p>
             <h3>Start where you left off.</h3>
-            <p>Continue listening gathers your recent downloads and saved bookmarks in one
+            <p>Continue listening gathers your recent downloads and saved songs in one
               row, next to today's top hits and For&nbsp;You picks drawn from what you are
               actually playing.</p>
             <ul>
@@ -1676,8 +1820,8 @@
           <article class="chapter">
             <p class="chapter__step"><i aria-hidden="true"></i>Step 02 · Search</p>
             <h3>Search it. Play it. Or keep it.</h3>
-            <p>Look up any song in Add and press play to hear it straight away, without
-              saving anything. Like it? Send the same track through the download pipeline
+            <p>Look up any song and press play to hear it straight away, without
+              saving anything. Like it? Save it, and it joins your library.
               and it joins your library.</p>
             <ul>
               <li>Instant play</li><li>Save to library</li>
@@ -1687,8 +1831,8 @@
           <article class="chapter">
             <p class="chapter__step"><i aria-hidden="true"></i>Step 03 · Save</p>
             <h3>Paste a link. Keep the audio.</h3>
-            <p>Singles, Shorts and playlists of up to 50 tracks import in a background
-              worker that keeps the best available stream as it is. One failed track is
+            <p>Singles, Shorts and playlists of up to 50 tracks save in the background,
+              keeping every song in its original quality. One failed track is
               reported on its own and never takes the rest down with it.</p>
             <ul>
               <li>Playlists up to 50</li><li>Best available audio</li><li>Runs in the background</li>
@@ -1698,30 +1842,30 @@
           <article class="chapter">
             <p class="chapter__step"><i aria-hidden="true"></i>Step 04 · Library</p>
             <h3>Tags, filters and sorting that keep up.</h3>
-            <p>Give a track as many tags as it deserves, then combine them with AND or OR,
+            <p>Give a track as many tags as it deserves, then mix and match them to filter,
               search by title or artist, and sort six different ways. Downloads and saved
               tracks sit side by side.</p>
             <ul>
-              <li>AND / OR tag filters</li><li>Six sort modes</li><li>Downloads and saved together</li>
+              <li>Mix-and-match tag filters</li><li>Six sort modes</li><li>Downloads and saved together</li>
             </ul>
           </article>
 
           <article class="chapter">
             <p class="chapter__step"><i aria-hidden="true"></i>Step 05 · Radio</p>
             <h3>A radio that learns you, on your phone.</h3>
-            <p>Plays, replays and skips train a taste model per track and per artist —
-              entirely on device. Shuffle play respects the filters you set, and Spice&nbsp;up
-              keeps the queue moving past the end of any playlist.</p>
+            <p>Plays, replays and skips teach Aura what you like —
+              all privately on your phone. Shuffle plays only what you picked, and Spice&nbsp;up
+              keeps the music going after any playlist ends — you're always in control.</p>
             <ul>
-              <li>Per track</li><li>Per artist</li><li>Spice up</li>
+              <li>Learns your taste</li><li>Stays on your phone</li><li>Spice up</li>
             </ul>
           </article>
 
           <article class="chapter">
             <p class="chapter__step"><i aria-hidden="true"></i>Step 06 · Controls</p>
             <h3>There when the app isn't.</h3>
-            <p>Media3 notifications and lock screen controls, a mini player you can swipe
-              between tracks, and a full queue you can reorder — then a versioned backup
+            <p>Notification and lock-screen controls, plus a mini player you can swipe
+              between tracks, and a full queue you can reorder — plus a simple backup
               for the day you change phones.</p>
             <ul>
               <li>Notification controls</li><li>Lock screen</li><li>Backup and restore</li>
@@ -1765,8 +1909,8 @@
           <div class="card__device" aria-hidden="true">
             <div class="phone">
               <div class="screen">
-                <img class="is-active" src="screenshots/18-onboarding-starter-picks.png"
-                     data-fallback="../docs/screenshots/18-onboarding-starter-picks.png"
+                <img class="is-active" src="screenshots/18-onboarding-starter-picks.webp"
+                    
                      alt="" loading="lazy" decoding="async">
               </div>
             </div>
@@ -1785,8 +1929,8 @@
           <div class="card__device" aria-hidden="true">
             <div class="phone">
               <div class="screen">
-                <img class="is-active" src="screenshots/17-library-download-queue-progress.png"
-                     data-fallback="../docs/screenshots/17-library-download-queue-progress.png"
+                <img class="is-active" src="screenshots/17-library-download-queue-progress.webp"
+                    
                      alt="" loading="lazy" decoding="async">
               </div>
             </div>
@@ -1799,14 +1943,14 @@
             <span class="card__no">03</span>
           </div>
           <h3>Saved, without the download.</h3>
-          <p>Bookmark a track and it starts almost instantly from a pre-warmed link and an
-            on-disk cache — with the same tags, filters and sorting as everything you have
-            downloaded.</p>
+          <p>Save a track without downloading and it still starts almost instantly
+            with the same tags, filters and sorting as the songs on your
+            phone.</p>
           <div class="card__device" aria-hidden="true">
             <div class="phone">
               <div class="screen">
-                <img class="is-active" src="screenshots/09-library-saved-tab.png"
-                     data-fallback="../docs/screenshots/09-library-saved-tab.png"
+                <img class="is-active" src="screenshots/09-library-saved-tab.webp"
+                    
                      alt="" loading="lazy" decoding="async">
               </div>
             </div>
@@ -1825,8 +1969,8 @@
           <div class="card__device" aria-hidden="true">
             <div class="phone">
               <div class="screen">
-                <img class="is-active" src="screenshots/12-queue-bottom-sheet.png"
-                     data-fallback="../docs/screenshots/12-queue-bottom-sheet.png"
+                <img class="is-active" src="screenshots/12-queue-bottom-sheet.webp"
+                    
                      alt="" loading="lazy" decoding="async">
               </div>
             </div>
@@ -1839,14 +1983,14 @@
             <span class="card__no">05</span>
           </div>
           <h3>Every track, filed your way.</h3>
-          <p>Fix a title, swap the artwork, correct an artist or add another tag. Tags are
-            many-to-many, so one song can sit in as many corners of your library as it
+          <p>Fix a title, swap the artwork, correct an artist or add another tag. One song can wear many tags,
+            so it can sit in as many corners of your library as it
             belongs to.</p>
           <div class="card__device" aria-hidden="true">
             <div class="phone">
               <div class="screen">
-                <img class="is-active" src="screenshots/10-song-details-tag-editor.png"
-                     data-fallback="../docs/screenshots/10-song-details-tag-editor.png"
+                <img class="is-active" src="screenshots/10-song-details-tag-editor.webp"
+                    
                      alt="" loading="lazy" decoding="async">
               </div>
             </div>
@@ -1859,14 +2003,14 @@
             <span class="card__no">06</span>
           </div>
           <h3>Back up. Move on. Restore.</h3>
-          <p>Export a versioned JSON file — the whole library, everything except certain
-            tags, or a hand-picked set — share it anywhere, and import it later with your
-            tags merged back in.</p>
+          <p>Save a backup file — your whole library or just the parts you choose —
+            share it anywhere, then bring everything back when you switch phones,
+            tags included.</p>
           <div class="card__device" aria-hidden="true">
             <div class="phone">
               <div class="screen">
-                <img class="is-active" src="screenshots/06-backup-export-import.png"
-                     data-fallback="../docs/screenshots/06-backup-export-import.png"
+                <img class="is-active" src="screenshots/06-backup-export-import.webp"
+                    
                      alt="" loading="lazy" decoding="async">
               </div>
             </div>
@@ -1884,7 +2028,7 @@
           <h2 id="privacy-title">No cloud.<br><span>No account.</span></h2>
           <p>
             Aura has nowhere to send your listening, because there is no server on the
-            other end. Your files, your tags and the model behind your recommendations
+            other end. Your files, your tags and what it learns about your taste
             never leave the device they were made on.
           </p>
 
@@ -1898,11 +2042,11 @@
               <i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></i>
             </li>
             <li style="--i:2">
-              <span>No ads and no analytics<small>No tracking SDKs, no profile being built</small></span>
+              <span>No ads, ever<small>No tracking, no profiles, no interruptions</small></span>
               <i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></i>
             </li>
             <li style="--i:3">
-              <span>Open source under MIT<small>Read the code, build it yourself, fork it</small></span>
+              <span>Completely free<small>No paywalls, no premium tier, no catch</small></span>
               <i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></i>
             </li>
           </ul>
@@ -1921,7 +2065,7 @@
           </div>
           <span class="vault__item" style="--float:-1s">Library</span>
           <span class="vault__item" style="--float:-2.6s">Tags and filters</span>
-          <span class="vault__item" style="--float:-4.1s">Taste model</span>
+          <span class="vault__item" style="--float:-4.1s">Your music taste</span>
           <span class="vault__item" style="--float:-5.4s">Queue and backups</span>
           <p class="vault__caption">Stored on your phone</p>
         </div>
@@ -1929,31 +2073,89 @@
     </section>
 
     <!-- ===============================================================
-         CLOSING CTA
+         FAQ — real indexable answers, mirrors the FAQPage JSON-LD above
          =============================================================== -->
-    <section class="closing" aria-labelledby="closing-title">
-      <div class="closing__aurora" aria-hidden="true"></div>
-      <div class="closing__inner reveal">
-        <img class="brand-mark" src="app-icon.png" alt="" width="128" height="128" data-brand>
-        <h2 id="closing-title">Take back your music.</h2>
-        <p>Install Aura on your Android phone and start a library that stays yours —
-          offline, untracked and organised the way you think about music.</p>
-
-        <div class="actions">
-          <a class="btn btn--light magnetic" href="https://github.com/Ai-Chetan/Aura-Music/releases" target="_blank" rel="noopener noreferrer">
-            <span class="btn__sheen" aria-hidden="true"></span>
-            Download the APK <span class="btn__arrow" aria-hidden="true">↓</span>
-          </a>
-          <a class="btn btn--quiet magnetic btn--link" href="https://github.com/Ai-Chetan/Aura-Music" target="_blank" rel="noopener noreferrer">
-            Read the source <span class="btn__arrow" aria-hidden="true">→</span>
-          </a>
+    <section class="faq" id="faq" aria-labelledby="faq-title">
+      <div class="faq__inner">
+        <div class="faq__head">
+          <h2 id="faq-title" class="reveal">Questions, answered plainly.</h2>
+          <p class="reveal" style="--delay:.08s">
+            The short version of what Aura is: a lightweight, free
+            <a href="offline-music-player/" style="text-decoration:underline;text-underline-offset:3px">offline music player for Android</a>
+            with no ads, no accounts and no tracking.
+          </p>
         </div>
 
-        <ul class="facts">
-          <li>Android</li>
-          <li>Free forever</li>
-          <li>MIT licence</li>
-        </ul>
+        <div class="faq__list">
+          <details class="reveal" name="aura-faq">
+            <summary>Is Aura an offline music player?</summary>
+            <p>Yes. Aura is designed around locally stored audio and offline playback. Songs you save live on your phone and keep playing with no signal and no sign-in — see <a href="offline-music-player/">why Aura works offline</a>.</p>
+          </details>
+          <details class="reveal" style="--delay:.05s" name="aura-faq">
+            <summary>Is Aura available for Android?</summary>
+            <p>Yes. Aura is an <a href="android-music-player/">Android music player</a> (Android 8 and newer) distributed as a free app file (APK) on <a href="https://github.com/Ai-Chetan/Aura-Music/releases" target="_blank" rel="noopener noreferrer">GitHub Releases</a>. There is no account, no backend and no cloud library.</p>
+          </details>
+          <details class="reveal" style="--delay:.1s" name="aura-faq">
+            <summary>Does Aura have ads, accounts or tracking?</summary>
+            <p>No. Aura ships with zero ads, zero tracking, and nothing to sign up for. Your files, tags and listening history never leave the device — read the <a href="privacy/">privacy notes</a>.</p>
+          </details>
+          <details class="reveal" style="--delay:.15s" name="aura-faq">
+            <summary>How does Aura organize music with tags?</summary>
+            <p>Every track can carry many tags instead of living in one playlist. Mix and match tags to filter, search by title or artist, and sort six ways. The <a href="features/">features tour</a> shows the library, queue and radio in action.</p>
+          </details>
+          <details class="reveal" style="--delay:.2s" name="aura-faq">
+            <summary>Does Aura support lock-screen controls and queues?</summary>
+            <p>Yes. You get notification and lock-screen controls, plus a real queue with play-next, reorder, shuffle and repeat. <a href="download/">Download Aura free</a> and try it.</p>
+          </details>
+          <details class="reveal" style="--delay:.25s" name="aura-faq">
+            <summary>Is Aura free and open source?</summary>
+            <p>Yes. Aura is completely free — no paywalls, no premium tier — and open source under the MIT licence. Browse the <a href="https://github.com/Ai-Chetan/Aura-Music" target="_blank" rel="noopener noreferrer">source on GitHub</a>, report issues, or fork it. Contributors are welcome — see the <a href="https://github.com/Ai-Chetan/Aura-Music/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">contributing guide</a> to get started. Developed by <a href="https://github.com/Ai-Chetan" target="_blank" rel="noopener noreferrer">Ai-Chetan</a> for the open-source community.</p>
+          </details>
+          <details class="reveal" style="--delay:.3s" name="aura-faq">
+            <summary>Who owns the music in Aura?</summary>
+            <p>Aura doesn't own any songs and claims no rights over them. All music, album art, and names belong to their respective artists, labels, and rights holders — YouTube™ is a trademark of Google LLC. Aura is only a private, on-device player with no sharing built in: it simply keeps what <em>you</em> choose on your own phone for offline listening. Please save only content you own or have permission to keep, and respect creators and platform terms.</p>
+          </details>
+        </div>
+
+        <p class="faq__more reveal">Still curious? Read the <a href="faq/">full Aura FAQ</a> or the <a href="blog/">guides</a>.</p>
+      </div>
+    </section>
+
+    <!-- ===============================================================
+         OPEN SOURCE — Aura is MIT-licensed, contributors welcome
+         =============================================================== -->
+    <section class="opensource" id="open-source" aria-labelledby="open-source-title">
+      <div class="opensource__inner">
+        <div class="opensource__copy reveal">
+          <p class="opensource__eyebrow"><i aria-hidden="true"></i>Open source · MIT licence · Contributors welcome</p>
+          <h2 id="open-source-title">Aura is open source. <em>Come build it with us.</em></h2>
+          <p>
+            Every screen, queue and tag filter is built in the open — no hidden servers, no closed SDKs.
+            If you like private, on-device music, you are invited to shape it: fix a bug, polish the UI,
+            improve docs, or suggest what plays next.
+          </p>
+          <div class="opensource__actions">
+            <a class="btn btn--primary magnetic" href="https://github.com/Ai-Chetan/Aura-Music" target="_blank" rel="noopener noreferrer">
+              <span class="btn__sheen" aria-hidden="true"></span>
+              View source on GitHub
+            </a>
+            <a class="btn btn--quiet magnetic" href="https://github.com/Ai-Chetan/Aura-Music/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">
+              How to contribute
+            </a>
+          </div>
+          <p class="opensource__meta">MIT-licensed · No CLA · Issues and pull requests welcome · Newcomer-friendly</p>
+          <p class="opensource__meta" style="margin-top:8px">Developed by <a href="https://github.com/Ai-Chetan" target="_blank" rel="noopener noreferrer" style="color:var(--accent-deep);font-weight:700">Ai-Chetan</a> for the open-source community.</p>
+        </div>
+
+        <div class="opensource__card reveal" style="--delay:.1s">
+          <h3>Three ways to contribute today</h3>
+          <ol>
+            <li><b>1</b><span><a href="https://github.com/Ai-Chetan/Aura-Music/issues" target="_blank" rel="noopener noreferrer">Report an issue</a> — tell us what broke, on which device and Android version.</span></li>
+            <li><b>2</b><span><a href="https://github.com/Ai-Chetan/Aura-Music/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Open a pull request</a> — one focused change, with what you tested.</span></li>
+            <li><b>3</b><span>Improve docs or design — fix a typo, clarify a guide, or polish a screen in <code>ui/theme/</code>.</span></li>
+          </ol>
+          <p>Prefer reading code first? Start with the <a href="https://github.com/Ai-Chetan/Aura-Music" target="_blank" rel="noopener noreferrer">repository README</a> and <code>docs/</code>.</p>
+        </div>
       </div>
     </section>
   </main>
@@ -1964,21 +2166,32 @@
   <footer class="site-footer">
     <div class="footer__top">
       <div>
-        <a class="brand" href="#top">
-          <img class="brand-mark" src="app-icon.png" alt="" width="52" height="52" data-brand>
-          Aura
+        <a class="brand" href="#top" aria-label="Aura, back to top">
+          <img class="brand-lockup" src="aura-nav.png" alt="Aura" width="2172" height="724" loading="lazy" decoding="async" data-brand>
         </a>
         <p>A private, on-device music player for Android. Search, stream or save the best
           available audio — and keep every bit of it on your own phone.</p>
+        <p style="margin-top:14px">Aura is open source under the MIT licence — <a href="https://github.com/Ai-Chetan/Aura-Music" target="_blank" rel="noopener noreferrer" style="text-decoration:underline;text-underline-offset:3px;color:var(--on-dark)">contributors welcome</a>. Developed by <a href="https://github.com/Ai-Chetan" target="_blank" rel="noopener noreferrer" style="text-decoration:underline;text-underline-offset:3px;color:var(--on-dark)">Ai-Chetan</a> for the open-source community.</p>
       </div>
 
       <div class="footer__col">
         <h3>Product</h3>
         <ul>
-          <li><a href="#experience">Experience</a></li>
-          <li><a href="#features">Features</a></li>
-          <li><a href="#privacy">Privacy</a></li>
+          <li><a href="features/">Features</a></li>
+          <li><a href="offline-music-player/">Offline player</a></li>
+          <li><a href="android-music-player/">Android player</a></li>
+          <li><a href="download/">Download</a></li>
           <li><a href="#top">Back to top</a></li>
+        </ul>
+      </div>
+
+      <div class="footer__col">
+        <h3>Guides</h3>
+        <ul>
+          <li><a href="faq/">FAQ</a></li>
+          <li><a href="privacy/">Privacy</a></li>
+          <li><a href="blog/">Blog</a></li>
+          <li><a href="blog/best-offline-music-player-android/">Best offline players</a></li>
         </ul>
       </div>
 
@@ -1988,13 +2201,18 @@
           <li><a href="https://github.com/Ai-Chetan/Aura-Music" target="_blank" rel="noopener noreferrer">Repository</a></li>
           <li><a href="https://github.com/Ai-Chetan/Aura-Music/releases" target="_blank" rel="noopener noreferrer">Releases</a></li>
           <li><a href="https://github.com/Ai-Chetan/Aura-Music/issues" target="_blank" rel="noopener noreferrer">Report an issue</a></li>
+          <li><a href="https://github.com/Ai-Chetan/Aura-Music/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Contribute — all welcome</a></li>
+          <li><a href="#open-source">Why contribute?</a></li>
         </ul>
       </div>
     </div>
 
     <div class="footer__bottom">
-      <span>© <span id="year">2025</span> Aura · MIT licence</span>
-      <span>Android music, kept local.</span>
+      <span>© <span id="year">2025</span> Aura · MIT licence · Open source — contributors welcome</span>
+      <span>Developed by <a href="https://github.com/Ai-Chetan" target="_blank" rel="noopener noreferrer" style="text-decoration:underline;text-underline-offset:3px;color:inherit">Ai-Chetan</a> for the open-source community.</span>
+    </div>
+    <div class="footer__bottom" style="padding-top:0;border-top:0">
+      <span style="max-width:110ch;font-size:.78rem;line-height:1.6;opacity:.75">Aura does not own, host, or license any music. All songs, artwork &amp; trademarks belong to their respective artists, labels &amp; rights holders — YouTube™ is a trademark of Google LLC. Aura is a private on-device player with no sharing built in; please keep only content you own or have permission to store.</span>
     </div>
   </footer>
 
@@ -2086,17 +2304,8 @@
       listen(window, "orientationchange", handleResize, { passive: true });
 
       /* ===============================================================
-         1. ASSET RESILIENCE — missing screenshots and icons degrade well
+         1. ASSET RESILIENCE — missing brand icons degrade gracefully
          =============================================================== */
-      qsa("img[data-fallback]").forEach(function (img) {
-        listen(img, "error", function () {
-          var next = img.getAttribute("data-fallback");
-          img.removeAttribute("data-fallback");
-          if (next) img.src = next;
-          else img.style.opacity = "0";
-        }, { once: true });
-      });
-
       qsa("img[data-brand]").forEach(function (img) {
         listen(img, "error", function () {
           var mark = document.createElement("span");
@@ -2245,7 +2454,7 @@
       });
 
       if (supportsIO && navAnchors.length) {
-        var order = ["experience", "features", "privacy"];
+        var order = ["experience", "features", "faq", "privacy"];
         var onScreen = {};
         var sectionObserver = new IntersectionObserver(function (entries) {
           entries.forEach(function (entry) { onScreen[entry.target.id] = entry.isIntersecting; });

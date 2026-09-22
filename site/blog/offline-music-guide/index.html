@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>How to Listen to Music Offline on Android | Aura</title>
+  <meta name="description" content="A plain-English checklist for offline music on Android: downloads vs streaming bookmarks, storage, battery, lock-screen controls and backups. Built around Aura, free and open source.">
+  <link rel="canonical" href="https://listen-aura.vercel.app/blog/offline-music-guide/">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Aura Music">
+  <meta property="og:url" content="https://listen-aura.vercel.app/blog/offline-music-guide/">
+  <meta property="og:title" content="How to Listen to Music Offline on Android">
+  <meta property="og:description" content="Downloads vs bookmarks, storage, battery, backups — a checklist for a library that survives flights and dead zones.">
+  <meta property="og:image" content="https://listen-aura.vercel.app/screenshots/17-library-download-queue-progress.webp">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="How to Listen to Music Offline on Android">
+  <meta name="twitter:description" content="Downloads vs bookmarks, storage, battery, backups — a checklist for a library that survives flights and dead zones.">
+  <meta name="twitter:image" content="https://listen-aura.vercel.app/screenshots/17-library-download-queue-progress.webp">
+  <link rel="icon" type="image/png" href="../../aura-icon.png">
+  <link rel="apple-touch-icon" href="../../app-icon.png">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "How to listen to music offline on Android",
+    "description": "A checklist for a local music library that survives flights and dead zones.",
+    "datePublished": "2026-09-15",
+    "author": { "@type": "Organization", "name": "Aura Music", "url": "https://listen-aura.vercel.app/" },
+    "mainEntityOfPage": "https://listen-aura.vercel.app/blog/offline-music-guide/"
+  }
+  </script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box}
+    :root{--paper:#EDF2F6;--card:#fff;--ink:#06121D;--soft:#23394C;--muted:#52697E;--accent:#0B7FC4;--accent-deep:#075E92;--line:rgba(6,18,29,.12);--r:18px;--font:"Inter",ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif}
+    html{background:var(--paper)}
+    body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--font);line-height:1.7;font-size:1.03rem;-webkit-font-smoothing:antialiased}
+    .nav{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px clamp(18px,4vw,56px);background:rgba(237,242,246,.85);border-bottom:1px solid var(--line);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+    .brand{display:inline-flex;align-items:center;gap:10px;font-weight:700;font-size:1.1rem}
+    .brand img{width:30px;height:30px;border-radius:9px}
+    .brand img.brand-lockup{width:auto;height:42px;border-radius:0;background:none}
+    .nav nav{display:flex;flex-wrap:wrap;gap:2px 4px;align-items:center}
+    .nav nav a{padding:8px 12px;border-radius:999px;font-size:.86rem;font-weight:560;color:var(--muted)}
+    .nav nav a:hover{color:var(--ink);background:rgba(6,18,29,.05)}
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:999px;font-weight:620;font-size:.8rem;background:var(--ink);color:#fff;text-decoration:none}
+    article{width:min(760px,100%);margin:0 auto;padding:clamp(36px,6vw,72px) clamp(20px,4vw,40px) 80px}
+    .crumbs{font-size:.8rem;color:var(--muted);margin-bottom:18px}
+    .crumbs a{color:var(--accent-deep)}
+    h1{font-size:clamp(2rem,5vw,3rem);line-height:1.05;letter-spacing:-.035em;margin:0 0 12px;max-width:24ch}
+    time{font-size:.85rem;color:var(--muted)}
+    .lede{font-size:1.15rem;color:var(--muted);margin:14px 0 26px}
+    h2{font-size:1.5rem;letter-spacing:-.02em;margin:38px 0 8px}
+    p{margin:0 0 14px;color:var(--soft)}
+    ol,ul{margin:12px 0 18px;padding-left:22px;display:grid;gap:8px;color:var(--soft)}
+    .note{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:12px;padding:14px 18px;margin:20px 0;font-size:.95rem}
+    .cta{margin-top:44px;background:#04101A;color:#EDF4F9;border-radius:22px;padding:clamp(28px,4vw,44px);text-align:center}
+    .cta h2{color:#fff;margin:0 0 10px}
+    .cta p{color:#92A8BB;max-width:52ch;margin:0 auto 22px}
+    .cta .btn{background:#fff;color:#06121D;font-size:.95rem;padding:12px 24px}
+    footer{border-top:1px solid var(--line);padding:32px clamp(20px,4vw,56px);display:flex;flex-wrap:wrap;gap:8px 28px;justify-content:space-between;font-size:.85rem;color:var(--muted)}
+    footer a{color:var(--muted);margin-right:16px}
+    a{color:var(--accent-deep)}
+  </style>
+</head>
+<body>
+  <header class="nav">
+    <a class="brand" href="../../" aria-label="Aura home"><img class="brand-lockup" src="../../aura-nav.png" alt="Aura" width="2172" height="724" decoding="async"></a>
+    <nav aria-label="Primary">
+      <a href="../../features/">Features</a>
+      <a href="../../offline-music-player/">Offline player</a>
+      <a href="../../download/">Download</a>
+      <a href="../../faq/">FAQ</a>
+      <a href="../../blog/">Blog</a>
+    </nav>
+    <a class="btn" href="https://github.com/Ai-Chetan/Aura-Music/releases" target="_blank" rel="noopener noreferrer">Get Aura</a>
+  </header>
+
+  <article>
+    <p class="crumbs"><a href="../../">Home</a> · <a href="../">Blog</a> · How-to</p>
+    <h1>How to listen to music offline on Android</h1>
+    <time datetime="2026-09-15">September 2026 · 5 min read</time>
+    <p class="lede">Flights, tunnels, data-saver days, dead zones. A ten-minute setup is the difference between silence and your whole library.</p>
+
+    <h2>1. Know the two kinds of “saved”</h2>
+    <p>Most apps blur this, so let's be explicit. In Aura there are <strong>downloads</strong> — files on your phone that play with zero signal — and <strong>Saved songs</strong> — streaming shortcuts that start near-instantly but need a connection. For a flight, only downloads count. Check which is which before you leave Wi-Fi.</p>
+
+    <h2>2. Download on Wi-Fi, in the background</h2>
+    <p>Queue what you need before you need it: Aura imports playlists of up to 50 tracks in the background, so you can start a batch and put the phone down. The queue shows overall and per-song progress, lets you cancel anytime, and tells you plainly if anything failed.</p>
+
+    <h2>3. Check storage without granting everything</h2>
+    <p>Aura uses its own storage space on your phone — it never asks for access to all your files. A thousand tracks in original quality is roughly a few gigabytes; check <em>Settings → Storage</em> if a batch stalls, and clear saved artwork first (it downloads again by itself).</p>
+
+    <h2>4. Set up controls before you lock the phone</h2>
+    <p>Offline is when controls matter most — no pulling the phone out on a run. Aura gives you notification and lock-screen controls, a swipeable mini player, and a real queue with shuffle and repeat. On Android 13+, allow notifications when asked, or controls go quiet.</p>
+
+    <h2>5. Organize so airplane mode stays fun</h2>
+    <p>No cloud search to rescue you at 35,000 feet. Tag songs as you save them (<em>flight, gym, sleep</em>), so filters and shuffle still surface the right thing offline. The method: <a href="../organize-music-with-tags/">tags instead of playlists</a>.</p>
+
+    <h2>6. Back up before you switch phones</h2>
+    <div class="note">Save a backup file — your full library or just selected songs — and keep the file somewhere safe. On the new phone, bring it back with your tags included. Offline libraries are precious precisely because no cloud holds a copy.</div>
+
+    <div class="cta">
+      <h2>Build your offline library tonight.</h2>
+      <p>Free forever · No ads · No account. Ten minutes on Wi-Fi covers your next flight.</p>
+      <p><a class="btn" href="../../download/">Download Aura</a></p>
+    </div>
+  </article>
+
+  <footer>
+    <span>© 2026 Aura · MIT licence · Open source — <a href="https://github.com/Ai-Chetan/Aura-Music/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">contributors welcome</a></span>
+    <nav aria-label="Footer">
+      <a href="../../">Home</a><a href="../../features/">Features</a><a href="../../download/">Download</a><a href="../../faq/">FAQ</a><a href="../">Blog</a>
+    </nav>
+    <small style="flex-basis:100%;font-size:.78rem;line-height:1.6">Aura does not own, host, or license any music. All songs, artwork &amp; trademarks belong to their respective artists, labels &amp; rights holders — YouTube™ is a trademark of Google LLC. Private listening only; please keep content you own or have permission to store. Developed by <a href="https://github.com/Ai-Chetan" target="_blank" rel="noopener noreferrer">Ai-Chetan</a> for the open-source community.</small>
+  </footer>
+</body>
+</html>
