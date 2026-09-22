@@ -15,7 +15,11 @@
 
   <link rel="icon" type="image/x-icon" href="aura-favicon.ico">
   <link rel="icon" type="image/x-icon" href="aura.ico">
-  <link rel="manifest" href="manifest.webmanifest">
+  <!-- No PWA manifest link on purpose: the real app is the Android APK on the
+       Download page. Linking the manifest makes mobile Chrome offer this
+       website itself as an installable "Aura Music" app, which confuses users.
+       Removing it changes nothing for SEO (manifests are not a ranking factor);
+       all meta/OG/JSON-LD/sitemap/robots stay intact. -->
 
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Aura Music">
