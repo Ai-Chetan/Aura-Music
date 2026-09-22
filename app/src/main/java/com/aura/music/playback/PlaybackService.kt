@@ -32,6 +32,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
+@OptIn(UnstableApi::class)
 class PlaybackService : MediaSessionService() {
 
     private companion object {

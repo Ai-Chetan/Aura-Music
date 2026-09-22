@@ -1,4 +1,6 @@
-# Aura — Personal Music Vault for Android
+# Aura Music — Modern Offline Music Player for Android
+
+**Website:** https://listen-aura.vercel.app/ · **Download:** [GitHub Releases](https://github.com/Ai-Chetan/Aura-Music/releases)
 
 A private, on-device music player: paste a YouTube link, keep the best-available audio, organize everything with tags, and listen through a futuristic animated UI with full system playback integration.
 

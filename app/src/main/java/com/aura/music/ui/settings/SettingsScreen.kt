@@ -106,7 +106,7 @@ fun SettingsScreen(
                             )
                             Text(
                                 text = if (useMobileData) {
-                                    "Full experience everywhere — Discover, search and streaming."
+                                    "Everything works everywhere — Discover, search and streaming."
                                 } else {
                                     "Off: on mobile data only your downloads play."
                                 },

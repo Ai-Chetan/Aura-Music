@@ -216,7 +216,7 @@ class LibraryViewModel @Inject constructor(
             try {
                 songRepository.retryStarterBatch()
             } catch (e: Exception) {
-                _messages.emit("Couldn't retry: ${e.message}")
+                _messages.emit("Couldn't retry. Try again.")
             }
         }
     }
@@ -400,7 +400,7 @@ class LibraryViewModel @Inject constructor(
                 savedTrackRepository.recordPlay(track.url)
                 onPlaying()
             } catch (e: Exception) {
-                _messages.emit("Couldn't stream: ${e.message ?: "unknown error"}")
+                _messages.emit("Couldn't play this right now. Try again.")
             } finally {
                 _savedResolvingUrl.value = null
             }
@@ -425,7 +425,7 @@ class LibraryViewModel @Inject constructor(
                         _messages.emit("Shuffling ${shuffled.size} saved tracks")
                         onPlaying()
                     } catch (e: Exception) {
-                        _messages.emit("Couldn't stream: ${e.message ?: "unknown error"}")
+                        _messages.emit("Couldn't play this right now. Try again.")
                     } finally {
                         _savedResolvingUrl.value = null
                     }
@@ -458,7 +458,7 @@ class LibraryViewModel @Inject constructor(
                         playbackController.addToQueueEnd(transients.fromSaved(track))
                         _messages.emit("Queued \"${track.title}\" — plays after this song")
                     } catch (e: Exception) {
-                        _messages.emit("Couldn't queue: ${e.message ?: "unknown error"}")
+                        _messages.emit("Couldn't add this to the queue. Try again.")
                     }
                 }
             })) {
@@ -476,7 +476,7 @@ class LibraryViewModel @Inject constructor(
                         playbackController.playNext(transients.fromSaved(track))
                         _messages.emit("Will play next: ${track.title}")
                     } catch (e: Exception) {
-                        _messages.emit("Couldn't queue: ${e.message ?: "unknown error"}")
+                        _messages.emit("Couldn't add this to the queue. Try again.")
                     }
                 }
             })) {
@@ -496,7 +496,7 @@ class LibraryViewModel @Inject constructor(
                     savedTrackRepository.assignTag(track.track.id, tag.id)
                 }
             } catch (e: Exception) {
-                _messages.emit(e.message ?: "Couldn't update tags.")
+                _messages.emit("Couldn't update tags. Try again.")
             }
         }
     }
@@ -512,7 +512,7 @@ class LibraryViewModel @Inject constructor(
                     savedTrackRepository.assignTag(track.track.id, tagId)
                 }
             } catch (e: Exception) {
-                _messages.emit(e.message ?: "Couldn't create tag.")
+                _messages.emit("Couldn't create that tag. Try again.")
             }
         }
     }
@@ -535,7 +535,7 @@ class LibraryViewModel @Inject constructor(
                 savedTrackRepository.unsaveById(track.id)
                 _messages.emit("Removed \"${track.title}\" from Saved")
             } catch (e: Exception) {
-                _messages.emit(e.message ?: "Couldn't remove.")
+                _messages.emit("Couldn't remove it. Try again.")
             }
         }
     }
@@ -562,7 +562,7 @@ class LibraryViewModel @Inject constructor(
                 songRepository.deleteSong(songId)
                 _messages.emit("Deleted \"$title\"")
             } catch (e: Exception) {
-                _messages.emit("Couldn't delete: ${e.message}")
+                _messages.emit("Couldn't delete it. Try again.")
             }
         }
     }

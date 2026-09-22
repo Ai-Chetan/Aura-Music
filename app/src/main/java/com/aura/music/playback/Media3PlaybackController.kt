@@ -3,10 +3,12 @@ package com.aura.music.playback
 import android.content.ComponentName
 import android.content.Context
 import android.net.Uri
+import androidx.annotation.OptIn
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.aura.music.data.db.SongDao
@@ -64,6 +66,7 @@ class Media3PlaybackController @Inject constructor(
         private const val SONG_CACHE_MAX = 400
     }
 
+    @OptIn(UnstableApi::class)
     private val playerListener = object : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             updateState()

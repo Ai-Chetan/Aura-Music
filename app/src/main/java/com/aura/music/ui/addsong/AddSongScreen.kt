@@ -153,10 +153,11 @@ fun AddSongPanel(
                     .padding(bottom = AuraSpacing.Md)
             ) {
             AnimatedContent(
-                targetState = phaseKey(state.phase),
+                targetState = state.phase,
+                contentKey = { phaseKey(it) },
                 label = "downloadPhase"
-            ) { _ ->
-            when (val phase = state.phase) {
+            ) { targetPhase ->
+            when (val phase = targetPhase) {
                 is AddSongPhase.Idle -> {
                     GlassCard(
                         modifier = Modifier

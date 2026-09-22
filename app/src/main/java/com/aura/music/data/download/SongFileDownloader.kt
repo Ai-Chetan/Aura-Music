@@ -15,28 +15,24 @@ import javax.inject.Singleton
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
- * Turns raw extractor/network exceptions into something a user can act
- * on. Technical detail is kept in parentheses for debugging.
+ * Turns raw extractor/network errors into plain words anyone can act on.
  */
 fun friendlyDownloadError(e: Exception): String {
     val raw = e.message?.takeIf { it.isNotBlank() } ?: e.toString()
     return when {
         raw.contains("400") ->
-            "Bad request (400) — the link looks malformed. Check it and retry. ($raw)"
+            "That link looks broken. Check it and try again."
         raw.contains("403") ->
-            "YouTube refused this video (403) — usually temporary throttling. " +
-                "Retry in a bit. ($raw)"
+            "YouTube said no for now — usually temporary. Try again in a bit."
         raw.contains("429") ->
-            "YouTube is rate-limiting (429) — too many downloads at once. " +
-                "Retry in a bit. ($raw)"
+            "Too many downloads at once — slow down and try again in a bit."
         raw.contains("404") ->
-            "Video not found (404) — it may be deleted, private, or the link is wrong. ($raw)"
+            "Video not found — it may be deleted, private, or the link is wrong."
         raw.contains("navailable", ignoreCase = true) ->
-            "YouTube says this video is unavailable — region-lock, private/deleted link, " +
-                "or temporary throttling. Retry in a bit. ($raw)"
+            "YouTube says this video isn't available — it may be private, deleted, blocked in your country, or just busy. Try again in a bit."
         e is java.io.IOException ->
-            "Network error — check your connection and retry. ($raw)"
-        else -> raw
+            "No internet connection — check it and try again."
+        else -> "Something went wrong — try again."
     }.take(300)
 }
 
@@ -105,7 +101,7 @@ class SongFileDownloader @Inject constructor(
             }
 
             val fileLen = partFile.length()
-            require(fileLen > 1_000L) { "Downloaded file is empty — the stream expired. Please retry." }
+            require(fileLen > 1_000L) { "The download came back empty. Please try again." }
             if (!partFile.renameTo(destinationFile)) {
                 // Rare (same volume should always rename) — fall back to copy.
                 partFile.copyTo(destinationFile, overwrite = true)
@@ -141,7 +137,7 @@ class SongFileDownloader @Inject constructor(
                 }
                 songDao.getBySourceUrl(canonicalUrl)?.id ?: -1L
             }
-            require(songId > 0) { "Download finished without a song." }
+            require(songId > 0) { "Something went wrong saving this song. Try again." }
             return songId
         } catch (e: CancellationException) {
             try {

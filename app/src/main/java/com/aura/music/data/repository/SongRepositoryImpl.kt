@@ -99,7 +99,7 @@ class SongRepositoryImpl @Inject constructor(
                 if (songId > 0) {
                     Result.success(songId)
                 } else {
-                    Result.failure(Exception("Download completed but no song ID returned"))
+                    Result.failure(Exception("Download finished, but the song didn't save"))
                 }
             } else if (finished.state == WorkInfo.State.FAILED) {
                 val error = finished.outputData.getString(DownloadAudioWorker.KEY_ERROR)
@@ -392,7 +392,7 @@ class SongRepositoryImpl @Inject constructor(
             }
             Result.success(LibraryBackup.exportJson(kept))
         } catch (e: Exception) {
-            Result.failure(Exception("Export failed: ${e.message}"))
+            Result.failure(Exception("Export failed. Try again."))
         }
     }
 
@@ -428,7 +428,7 @@ class SongRepositoryImpl @Inject constructor(
             val canonical = YoutubeUrls.canonicalUrl(entry.sourceUrl)
             if (!YoutubeUrls.isYouTubeUrl(canonical)) {
                 failed++
-                errors.add("\"${entry.title}\": only YouTube links can be re-downloaded — skipped.")
+                errors.add("\"${entry.title}\": skipped — only YouTube links can be saved again.")
                 return@forEachIndexed
             }
             try {

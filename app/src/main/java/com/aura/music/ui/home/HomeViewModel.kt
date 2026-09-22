@@ -201,7 +201,7 @@ class HomeViewModel @Inject constructor(
                 savedTrackRepository.recordPlay(track.url)
                 onPlaying()
             } catch (e: Exception) {
-                _messages.emit("Couldn't stream: ${e.message ?: "unknown error"}")
+                _messages.emit("Couldn't play this right now. Try again.")
             } finally {
                 _resolvingUrl.value = null
             }
@@ -220,7 +220,7 @@ class HomeViewModel @Inject constructor(
                     _messages.emit("Saved — find it in Library → Saved")
                 }
             } catch (e: Exception) {
-                _messages.emit(e.message ?: "Couldn't save.")
+                _messages.emit("Couldn't save. Try again.")
             }
         }
     }
@@ -257,7 +257,7 @@ class HomeViewModel @Inject constructor(
                         playbackController.addToQueueEnd(transients.fromTrack(track))
                         _messages.emit("Queued \"${track.title}\" — plays after this song")
                     } catch (e: Exception) {
-                        _messages.emit("Couldn't queue: ${e.message ?: "unknown error"}")
+                        _messages.emit("Couldn't add this to the queue. Try again.")
                     }
                 }
             })) {
@@ -275,7 +275,7 @@ class HomeViewModel @Inject constructor(
                         playbackController.playNext(transients.fromTrack(track))
                         _messages.emit("Will play next: ${track.title}")
                     } catch (e: Exception) {
-                        _messages.emit("Couldn't queue: ${e.message ?: "unknown error"}")
+                        _messages.emit("Couldn't add this to the queue. Try again.")
                     }
                 }
             })) {
@@ -311,7 +311,7 @@ class HomeViewModel @Inject constructor(
                 savedTrackRepository.recordPlay(track.url)
                 onPlaying()
             } catch (e: Exception) {
-                _messages.emit("Couldn't stream: ${e.message ?: "unknown error"}")
+                _messages.emit("Couldn't play this right now. Try again.")
             } finally {
                 _resolvingUrl.value = null
             }

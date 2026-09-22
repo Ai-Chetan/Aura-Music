@@ -163,7 +163,7 @@ class NewPipeExtractionRepository @Inject constructor(
         val service = ServiceList.YouTube
         val kioskList = service.kioskList
         val extractor = kioskList.getExtractorById(TRENDING_MUSIC_KIOSK_ID, null)
-            ?: throw IllegalStateException("Trending music kiosk unavailable")
+            ?: throw IllegalStateException("Trending music isn't available right now")
         extractor.fetchPage()
         val page = extractor.initialPage
         return page.items
@@ -318,7 +318,7 @@ class NewPipeExtractionRepository @Inject constructor(
         // Pick the best available audio: Opus (~160k) first, then AAC (~128k),
         // then the highest bitrate of any remaining format.
         val bestAudio = selectBestAudio(audioStreams)
-            ?: throw IllegalStateException("Could not select best audio stream")
+            ?: throw IllegalStateException("Couldn't get the audio for this song")
 
         val codec = when {
             bestAudio.codec?.contains("opus", ignoreCase = true) == true -> "opus"

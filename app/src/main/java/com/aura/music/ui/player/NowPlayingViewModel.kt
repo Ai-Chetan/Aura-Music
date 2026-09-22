@@ -71,7 +71,7 @@ class NowPlayingViewModel @Inject constructor(
                     _messages.emit("Saved — find it in Library → Saved")
                 }
             } catch (e: Exception) {
-                _messages.emit(e.message ?: "Couldn't save.")
+                _messages.emit("Couldn't save. Try again.")
             }
         }
     }
@@ -104,7 +104,7 @@ class NowPlayingViewModel @Inject constructor(
                 }
                 _messages.emit("Deleted \"${song.title}\"")
             } catch (e: Exception) {
-                _messages.emit(e.message ?: "Couldn't delete.")
+                _messages.emit("Couldn't delete it. Try again.")
             }
         }
     }

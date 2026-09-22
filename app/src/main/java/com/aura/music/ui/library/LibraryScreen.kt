@@ -1084,8 +1084,8 @@ private fun StarterBatchCard(
                 )
                 Spacer(modifier = Modifier.width(AuraSpacing.Xs))
                 Text(
-                    text = if (batch.finished) "Starter downloads"
-                    else "Getting starters • ${batch.done}/${batch.total}",
+                    text = if (batch.finished) "Starter songs"
+                    else "Getting your starter songs • ${batch.done}/${batch.total}",
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f)

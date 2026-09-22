@@ -103,7 +103,7 @@ object LibraryBackup {
             val version = root.optInt("version", BACKUP_VERSION)
             if (version != BACKUP_VERSION) {
                 return Result.failure(
-                    Exception("Unsupported backup version $version (this app reads v$BACKUP_VERSION).")
+                    Exception("This backup needs a newer Aura to open. Update the app and try again.")
                 )
             }
             val songsJson = root.optJSONArray("songs")
@@ -150,7 +150,7 @@ object LibraryBackup {
             }
             Result.success(ParsedBackup(entries = entries, invalid = invalid))
         } catch (e: Exception) {
-            Result.failure(Exception("Couldn't read that file as JSON: ${e.message}"))
+            Result.failure(Exception("Couldn't read that file — it doesn't look like an Aura backup."))
         }
     }
 }

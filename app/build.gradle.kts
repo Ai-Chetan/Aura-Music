@@ -33,6 +33,13 @@ android {
         }
     }
 
+    lint {
+        // Workaround: AGP lifecycle lint detector crashes with current Kotlin
+        // (IncompatibleClassChangeError in NonNullableMutableLiveDataDetector).
+        // Not our code — re-enable after AGP/Kotlin bump.
+        disable += "NullSafeMutableLiveData"
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

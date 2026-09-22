@@ -43,7 +43,7 @@ fun buildAuraTour(nav: TourNavigator): List<TourStep> = listOf(
         id = "home.hitmenu",
         title = "Play, download or save",
         body = "Every hit has a ⋮ menu: stream now, download for offline, " +
-            "add to queue, or play next. Saving bookmarks it to your library.",
+            "add to queue, or play next. Saving keeps it in your library.",
         anchorId = TourAnchors.HOME_HIT_MENU,
         optional = true,
         anchorTimeoutMs = 1_500,
@@ -143,7 +143,7 @@ fun buildAuraTour(nav: TourNavigator): List<TourStep> = listOf(
         id = "settings.data",
         title = "Data usage",
         body = "Everything is on by default. Turn mobile data off and " +
-            "metered connections only play your downloads — Wi-Fi is never " +
+            "only your downloads will play on limited connections — Wi-Fi is never " +
             "restricted.",
         anchorId = TourAnchors.SETTINGS_DATA,
         runBefore = { nav.goSettings() }
@@ -158,7 +158,7 @@ fun buildAuraTour(nav: TourNavigator): List<TourStep> = listOf(
     TourStep(
         id = "backup.export",
         title = "Export & import",
-        body = "Export saves a JSON you can import on any device to " +
+        body = "Export saves a small backup file you can bring to any device to " +
             "rebuild your vault; Share sends it straight to Drive or chat.",
         anchorId = TourAnchors.BACKUP_EXPORT,
         runBefore = { nav.goBackup() }

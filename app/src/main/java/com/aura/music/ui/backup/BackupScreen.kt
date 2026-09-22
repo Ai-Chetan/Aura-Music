@@ -370,7 +370,7 @@ fun BackupScreen(
                     Spacer(modifier = Modifier.height(AuraSpacing.Xs))
 
                     Text(
-                        text = "Restore from JSON.",
+                        text = "Restore from a backup file.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -399,7 +399,7 @@ fun BackupScreen(
                         Spacer(modifier = Modifier.height(AuraSpacing.Xxs))
                         Text(
                             text = "${preview.importable} new • " +
-                                "${preview.duplicates} dupes • " +
+                                "${preview.duplicates} already saved • " +
                                 "${preview.invalid} skipped",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -470,7 +470,7 @@ fun BackupScreen(
                             Spacer(modifier = Modifier.width(AuraSpacing.Xs))
                             Text(
                                 text = "Done: ${summary.imported} new, " +
-                                    "${summary.duplicatesMerged} merged, " +
+                                    "${summary.duplicatesMerged} already saved, " +
                                     "${summary.failed} failed",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurface

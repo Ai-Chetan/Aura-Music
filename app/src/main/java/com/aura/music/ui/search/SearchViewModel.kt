@@ -134,7 +134,7 @@ class SearchViewModel @Inject constructor(
                 savedTrackRepository.recordPlay(track.url)
                 onPlaying()
             } catch (e: Exception) {
-                _messages.emit("Couldn't stream: ${e.message ?: "unknown error"}")
+                _messages.emit("Couldn't play this right now. Try again.")
             } finally {
                 _uiState.update { it.copy(resolvingUrl = null) }
             }
@@ -177,7 +177,7 @@ class SearchViewModel @Inject constructor(
                     _messages.emit("Saved — find it in Library → Saved")
                 }
             } catch (e: Exception) {
-                _messages.emit(e.message ?: "Couldn't save.")
+                _messages.emit("Couldn't save. Try again.")
             }
         }
     }
