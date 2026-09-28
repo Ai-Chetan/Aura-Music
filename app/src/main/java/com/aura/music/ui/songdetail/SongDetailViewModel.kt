@@ -7,6 +7,7 @@ import com.aura.music.data.db.SongEntity
 import com.aura.music.data.db.TagEntity
 import com.aura.music.domain.repository.SongRepository
 import com.aura.music.domain.repository.TagRepository
+import com.aura.music.domain.repository.TagUsage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,6 +15,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -110,6 +112,32 @@ class SongDetailViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 _messages.tryEmit(e.message ?: "Couldn't create tag")
+            }
+        }
+    }
+
+    /** Per-tag usage counts for the Manage Tags dialog (loaded when it opens). */
+    private val _tagUsage = MutableStateFlow<Map<Long, TagUsage>>(emptyMap())
+    val tagUsage: StateFlow<Map<Long, TagUsage>> = _tagUsage.asStateFlow()
+
+    fun loadTagUsage() {
+        viewModelScope.launch {
+            try {
+                _tagUsage.value = tagRepository.getTagUsage()
+            } catch (_: Exception) {
+                // Dialog still works — rows just show without counts.
+            }
+        }
+    }
+
+    /** Deletes a tag everywhere — the DB cascades the assignments away. */
+    fun deleteTag(tag: TagEntity) {
+        viewModelScope.launch {
+            try {
+                tagRepository.deleteTag(tag.id)
+                loadTagUsage()
+            } catch (e: Exception) {
+                _messages.tryEmit(e.message ?: "Couldn't delete tag")
             }
         }
     }

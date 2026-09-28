@@ -32,3 +32,6 @@ Desktop.ini
 
 # Local scratch dirs (never commit)
 .tmp-songs/
+
+.env
+aura-release.keystore

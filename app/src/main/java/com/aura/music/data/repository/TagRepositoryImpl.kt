@@ -4,6 +4,7 @@ import com.aura.music.data.db.SongTagCrossRef
 import com.aura.music.data.db.TagDao
 import com.aura.music.data.db.TagEntity
 import com.aura.music.domain.repository.TagRepository
+import com.aura.music.domain.repository.TagUsage
 import com.aura.music.ui.theme.TagColors
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
@@ -47,6 +48,21 @@ class TagRepositoryImpl @Inject constructor(
 
     override suspend fun removeTagFromSong(songId: Long, tagId: Long) {
         tagDao.removeTagFromSong(SongTagCrossRef(songId = songId, tagId = tagId))
+    }
+
+    override suspend fun deleteTag(tagId: Long) {
+        tagDao.deleteTag(tagId)
+    }
+
+    override suspend fun getTagUsage(): Map<Long, TagUsage> {
+        val songCounts = tagDao.countSongUsage().associate { it.tagId to it.uses }
+        val savedCounts = tagDao.countSavedUsage().associate { it.tagId to it.uses }
+        return (songCounts.keys + savedCounts.keys).associateWith { tagId ->
+            TagUsage(
+                songs = songCounts[tagId] ?: 0,
+                savedTracks = savedCounts[tagId] ?: 0
+            )
+        }
     }
 
     private fun normalizeTagName(name: String): String =

@@ -53,6 +53,7 @@ import com.aura.music.ui.components.AmbientBackground
 import com.aura.music.ui.components.AuraEmptyState
 import com.aura.music.ui.components.AuraToast
 import com.aura.music.ui.components.AuraTopBar
+import com.aura.music.ui.components.ManageTagsDialog
 import com.aura.music.ui.components.QualityBadge
 import com.aura.music.ui.components.TagChip
 import com.aura.music.ui.components.collectToast
@@ -67,8 +68,10 @@ fun SongDetailScreen(
     viewModel: SongDetailViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val tagUsage by viewModel.tagUsage.collectAsStateWithLifecycle()
     val toast = collectToast(viewModel.messages)
     var newTagName by rememberSaveable { mutableStateOf("") }
+    var showManageTags by rememberSaveable { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         AmbientBackground()
@@ -166,12 +169,27 @@ fun SongDetailScreen(
 
         Spacer(modifier = Modifier.height(AuraSpacing.Xl))
 
-        Text(
-            text = "Tags",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(horizontal = AuraSpacing.Md)
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = AuraSpacing.Md),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Tags",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f)
+            )
+            TextButton(
+                onClick = {
+                    viewModel.loadTagUsage()
+                    showManageTags = true
+                }
+            ) {
+                Text("Manage")
+            }
+        }
 
         Spacer(modifier = Modifier.height(AuraSpacing.Xs))
 
@@ -293,6 +311,16 @@ fun SongDetailScreen(
 
         Spacer(modifier = Modifier.height(AuraSpacing.Xxl))
     }
+
+    if (showManageTags) {
+        ManageTagsDialog(
+            tags = state.allTags,
+            usage = tagUsage,
+            onDelete = viewModel::deleteTag,
+            onDismiss = { showManageTags = false }
+        )
+    }
+
         AuraToast(toast)
     }
 }

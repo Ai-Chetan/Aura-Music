@@ -100,6 +100,7 @@ import com.aura.music.ui.components.AuraSearchField
 import com.aura.music.ui.components.AuraToast
 import com.aura.music.ui.components.AuraTopBar
 import com.aura.music.ui.components.GlassCard
+import com.aura.music.ui.components.ManageTagsDialog
 import com.aura.music.ui.components.MediaRowShell
 import com.aura.music.ui.components.ShimmerList
 import com.aura.music.ui.components.SongRow
@@ -134,6 +135,8 @@ fun LibraryScreen(
     val spiceUpOn by viewModel.spiceUp.collectAsStateWithLifecycle()
     val toast = collectToast(viewModel.messages)
     var sortMenuOpen by remember { mutableStateOf(false) }
+    val tagUsage by viewModel.tagUsage.collectAsStateWithLifecycle()
+    var showManageTags by rememberSaveable { mutableStateOf(false) }
     // 0 = Downloaded (offline), 1 = Saved (streams, needs internet).
     var tab by rememberSaveable { mutableIntStateOf(0) }
 
@@ -334,6 +337,10 @@ fun LibraryScreen(
                     onUnsave = viewModel::unsaveTrack,
                     onToggleTag = viewModel::toggleSavedTagAssignment,
                     onCreateTag = viewModel::createAndAssignSavedTag,
+                    onManageTags = {
+                        viewModel.loadTagUsage()
+                        showManageTags = true
+                    },
                     onClearSearch = { viewModel.setSearchQuery("") },
                     onDiscover = onDiscoverClick ?: onAddSongClick,
                     modifier = Modifier.weight(1f)
@@ -504,6 +511,15 @@ fun LibraryScreen(
             } // end Downloaded tab
         }
         }
+
+        if (showManageTags) {
+            ManageTagsDialog(
+                tags = state.tags,
+                usage = tagUsage,
+                onDelete = viewModel::deleteTag,
+                onDismiss = { showManageTags = false }
+            )
+        }
     }
 }
 
@@ -639,6 +655,7 @@ private fun SavedTab(
     onUnsave: (com.aura.music.data.db.SavedTrackEntity) -> Unit,
     onToggleTag: (com.aura.music.data.db.SavedTrackWithTags, com.aura.music.data.db.TagEntity) -> Unit,
     onCreateTag: (com.aura.music.data.db.SavedTrackWithTags, String) -> Unit,
+    onManageTags: () -> Unit,
     onClearSearch: () -> Unit,
     onDiscover: () -> Unit,
     modifier: Modifier = Modifier
@@ -791,6 +808,7 @@ private fun SavedTab(
             allTags = allTags,
             onToggle = { tag -> onToggleTag(pickerItem, tag) },
             onCreate = { name -> onCreateTag(pickerItem, name) },
+            onManageTags = onManageTags,
             onDismiss = { tagPickerId = null }
         )
     }
@@ -986,12 +1004,25 @@ private fun SavedTagPickerDialog(
     allTags: List<com.aura.music.data.db.TagEntity>,
     onToggle: (com.aura.music.data.db.TagEntity) -> Unit,
     onCreate: (String) -> Unit,
+    onManageTags: () -> Unit,
     onDismiss: () -> Unit
 ) {
     var newTag by rememberSaveable { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Tags", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "Tags",
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+                TextButton(onClick = onManageTags) {
+                    Text("Manage")
+                }
+            }
+        },
         text = {
             Column(
                 modifier = Modifier

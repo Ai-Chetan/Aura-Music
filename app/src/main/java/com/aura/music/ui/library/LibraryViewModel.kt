@@ -18,6 +18,7 @@ import com.aura.music.domain.repository.SavedTrackRepository
 import com.aura.music.domain.repository.SongRepository
 import com.aura.music.domain.repository.StarterBatchStatus
 import com.aura.music.domain.repository.TagRepository
+import com.aura.music.domain.repository.TagUsage
 import com.aura.music.playback.PlaybackController
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -29,6 +30,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -513,6 +515,41 @@ class LibraryViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 _messages.emit("Couldn't create that tag. Try again.")
+            }
+        }
+    }
+
+    /** Per-tag usage counts for the Manage Tags dialog (loaded when it opens). */
+    private val _tagUsage = MutableStateFlow<Map<Long, TagUsage>>(emptyMap())
+    val tagUsage: StateFlow<Map<Long, TagUsage>> = _tagUsage.asStateFlow()
+
+    fun loadTagUsage() {
+        viewModelScope.launch {
+            try {
+                _tagUsage.value = tagRepository.getTagUsage()
+            } catch (_: Exception) {
+                // Dialog still works — rows just show without counts.
+            }
+        }
+    }
+
+    /**
+     * Deletes a tag everywhere — the DB cascades the assignments away.
+     * Dropped from both tabs' filters too, so a stale selection can't
+     * keep hiding songs.
+     */
+    fun deleteTag(tag: TagEntity) {
+        viewModelScope.launch {
+            try {
+                tagRepository.deleteTag(tag.id)
+                selectedTagNames.update { it - tag.name }
+                excludedTagNames.update { it - tag.name }
+                savedSelectedTagNames.update { it - tag.name }
+                savedExcludedTagNames.update { it - tag.name }
+                loadTagUsage()
+                _messages.emit("Deleted tag \"${tag.name}\"")
+            } catch (e: Exception) {
+                _messages.emit("Couldn't delete the tag. Try again.")
             }
         }
     }
