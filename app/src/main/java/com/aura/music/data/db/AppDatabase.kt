@@ -10,9 +10,12 @@ import androidx.room.RoomDatabase
         SongTagCrossRef::class,
         QueueStateEntity::class,
         SavedTrackEntity::class,
-        SavedTrackTagCrossRef::class
+        SavedTrackTagCrossRef::class,
+        PlaylistEntity::class,
+        PlaylistSongCrossRef::class,
+        PlaylistSavedCrossRef::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -20,6 +23,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun tagDao(): TagDao
     abstract fun queueStateDao(): QueueStateDao
     abstract fun savedTrackDao(): SavedTrackDao
+    abstract fun playlistDao(): PlaylistDao
 
     companion object {
         const val DATABASE_NAME = "aura_music.db"

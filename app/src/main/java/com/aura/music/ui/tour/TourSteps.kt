@@ -68,9 +68,9 @@ fun buildAuraTour(nav: TourNavigator): List<TourStep> = listOf(
     ),
     TourStep(
         id = "lib.tabs",
-        title = "Downloaded vs Saved",
-        body = "Downloaded is your offline vault. Saved streams almost " +
-            "instantly but needs internet. Your counts show in each tab.",
+        title = "One library, all your music",
+        body = "Downloads and saved bookmarks live in one list — filter with " +
+            "the All / Offline / Saved chips, or open a playlist from the rail.",
         anchorId = TourAnchors.LIB_TABS,
         runBefore = { nav.goLibrary() }
     ),
@@ -151,15 +151,16 @@ fun buildAuraTour(nav: TourNavigator): List<TourStep> = listOf(
     TourStep(
         id = "settings.backup",
         title = "Backup & restore",
-        body = "Export your whole vault — every song and tag — to one " +
-            "small file. Next shows you how.",
+        body = "Export your whole library — songs, saved tracks, tags and " +
+            "playlists — to one small file. Next shows you how.",
         anchorId = TourAnchors.SETTINGS_BACKUP
     ),
     TourStep(
         id = "backup.export",
         title = "Export & import",
-        body = "Export saves a small backup file you can bring to any device to " +
-            "rebuild your vault; Share sends it straight to Drive or chat.",
+        body = "Export everything — songs, saved bookmarks, tags and " +
+            "playlists — to one small file you can bring to any device; " +
+            "Share sends it straight to Drive or chat.",
         anchorId = TourAnchors.BACKUP_EXPORT,
         runBefore = { nav.goBackup() }
     )

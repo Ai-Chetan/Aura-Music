@@ -3,8 +3,10 @@ package com.aura.music.ui.songdetail
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.aura.music.data.db.PlaylistWithCount
 import com.aura.music.data.db.SongEntity
 import com.aura.music.data.db.TagEntity
+import com.aura.music.domain.repository.PlaylistRepository
 import com.aura.music.domain.repository.SongRepository
 import com.aura.music.domain.repository.TagRepository
 import com.aura.music.domain.repository.TagUsage
@@ -38,6 +40,7 @@ class SongDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val songRepository: SongRepository,
     private val tagRepository: TagRepository,
+    private val playlistRepository: PlaylistRepository,
     private val playbackController: com.aura.music.playback.PlaybackController
 ) : ViewModel() {
 
@@ -138,6 +141,58 @@ class SongDetailViewModel @Inject constructor(
                 loadTagUsage()
             } catch (e: Exception) {
                 _messages.tryEmit(e.message ?: "Couldn't delete tag")
+            }
+        }
+    }
+
+    // ---- Playlists ----
+
+    val playlists: StateFlow<List<PlaylistWithCount>> =
+        playlistRepository.observePlaylists().stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = emptyList()
+        )
+
+    /** Playlist ids that already contain this song (picker chip state). */
+    private val _playlistMembership = MutableStateFlow<Set<Long>>(emptySet())
+    val playlistMembership: StateFlow<Set<Long>> = _playlistMembership.asStateFlow()
+
+    fun loadPlaylistMembership() {
+        viewModelScope.launch {
+            _playlistMembership.value = try {
+                playlistRepository.playlistIdsForSong(songId)
+            } catch (_: Exception) {
+                emptySet()
+            }
+        }
+    }
+
+    fun togglePlaylistMembership(playlistId: Long, isMember: Boolean) {
+        viewModelScope.launch {
+            try {
+                if (isMember) playlistRepository.removeSong(playlistId, songId)
+                else playlistRepository.addSong(playlistId, songId)
+                _playlistMembership.value = playlistRepository.playlistIdsForSong(songId)
+            } catch (e: Exception) {
+                _messages.tryEmit("Couldn't update the playlist. Try again.")
+            }
+        }
+    }
+
+    fun createPlaylistAndAdd(name: String) {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return
+        viewModelScope.launch {
+            try {
+                val playlistId = playlistRepository.getOrCreate(trimmed)
+                if (playlistId > 0) {
+                    playlistRepository.addSong(playlistId, songId)
+                    _playlistMembership.value = playlistRepository.playlistIdsForSong(songId)
+                    _messages.tryEmit("Added to \"$trimmed\"")
+                }
+            } catch (e: Exception) {
+                _messages.tryEmit("Couldn't create that playlist. Try again.")
             }
         }
     }

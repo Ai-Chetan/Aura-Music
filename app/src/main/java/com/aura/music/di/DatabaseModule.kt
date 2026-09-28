@@ -5,6 +5,7 @@ import androidx.room.Room
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.aura.music.data.db.AppDatabase
+import com.aura.music.data.db.PlaylistDao
 import com.aura.music.data.db.QueueStateDao
 import com.aura.music.data.db.SavedTrackDao
 import com.aura.music.data.db.SongDao
@@ -123,6 +124,56 @@ private val MIGRATION_3_4 = object : Migration(3, 4) {
     }
 }
 
+/**
+ * v8 → v9: playlists (the real ones this time — v5→v6 dropped tables that
+ * no UI ever used). Fresh tables, no data to migrate.
+ */
+private val MIGRATION_8_9 = object : Migration(8, 9) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS playlists (" +
+                "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "name TEXT NOT NULL, " +
+                "createdAt INTEGER NOT NULL)"
+        )
+        db.execSQL(
+            "CREATE UNIQUE INDEX IF NOT EXISTS index_playlists_name ON playlists(name)"
+        )
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS playlist_song_cross_ref (" +
+                "playlistId INTEGER NOT NULL, " +
+                "songId INTEGER NOT NULL, " +
+                "PRIMARY KEY(playlistId, songId), " +
+                "FOREIGN KEY(playlistId) REFERENCES playlists(id) ON DELETE CASCADE, " +
+                "FOREIGN KEY(songId) REFERENCES songs(id) ON DELETE CASCADE)"
+        )
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS index_playlist_song_cross_ref_playlistId " +
+                "ON playlist_song_cross_ref(playlistId)"
+        )
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS index_playlist_song_cross_ref_songId " +
+                "ON playlist_song_cross_ref(songId)"
+        )
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS playlist_saved_cross_ref (" +
+                "playlistId INTEGER NOT NULL, " +
+                "savedTrackId INTEGER NOT NULL, " +
+                "PRIMARY KEY(playlistId, savedTrackId), " +
+                "FOREIGN KEY(playlistId) REFERENCES playlists(id) ON DELETE CASCADE, " +
+                "FOREIGN KEY(savedTrackId) REFERENCES saved_tracks(id) ON DELETE CASCADE)"
+        )
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS index_playlist_saved_cross_ref_playlistId " +
+                "ON playlist_saved_cross_ref(playlistId)"
+        )
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS index_playlist_saved_cross_ref_savedTrackId " +
+                "ON playlist_saved_cross_ref(savedTrackId)"
+        )
+    }
+}
+
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
@@ -137,7 +188,10 @@ object DatabaseModule {
             AppDatabase::class.java,
             AppDatabase.DATABASE_NAME
         )
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
+            .addMigrations(
+                MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5,
+                MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9
+            )
             // Destructive ONLY on downgrade: every upgrade path has an explicit
             // migration, so a released vault is never wiped by an update.
             .fallbackToDestructiveMigrationOnDowngrade()
@@ -155,4 +209,7 @@ object DatabaseModule {
 
     @Provides
     fun provideSavedTrackDao(database: AppDatabase): SavedTrackDao = database.savedTrackDao()
+
+    @Provides
+    fun providePlaylistDao(database: AppDatabase): PlaylistDao = database.playlistDao()
 }

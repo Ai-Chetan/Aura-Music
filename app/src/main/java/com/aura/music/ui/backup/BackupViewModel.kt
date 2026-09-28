@@ -7,6 +7,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aura.music.domain.repository.ImportPreview
 import com.aura.music.domain.repository.ImportSummary
+import com.aura.music.domain.repository.PlaylistRepository
+import com.aura.music.domain.repository.SavedTrackRepository
 import com.aura.music.domain.repository.SongRepository
 import com.aura.music.domain.repository.TagRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -52,6 +54,8 @@ data class BackupUiState(
 @HiltViewModel
 class BackupViewModel @Inject constructor(
     private val songRepository: SongRepository,
+    savedTrackRepository: SavedTrackRepository,
+    playlistRepository: PlaylistRepository,
     tagRepository: TagRepository,
     @ApplicationContext private val appContext: Context
 ) : ViewModel() {
@@ -60,6 +64,14 @@ class BackupViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val allTags = tagRepository.observeAllTags()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Saved streaming bookmarks — v2 backups carry them (metadata only). */
+    val savedTracks = savedTrackRepository.observeSavedWithTags()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Playlists — v2 backups re-link their members by URL. */
+    val playlists = playlistRepository.observePlaylists()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     private val _uiState = MutableStateFlow(BackupUiState())
@@ -275,7 +287,11 @@ class BackupViewModel @Inject constructor(
             _uiState.update {
                 it.copy(
                     importWorking = true, importSummary = null, importError = null,
-                    importDone = 0, importTotal = it.importPreview?.total ?: 0, importCurrent = ""
+                    importDone = 0,
+                    // Songs phase first, then the instant bookmarks phase.
+                    importTotal = (it.importPreview?.total ?: 0) +
+                        (it.importPreview?.savedTotal ?: 0),
+                    importCurrent = ""
                 )
             }
             // Parse + restore run off Main; progress updates are thread-safe.

@@ -58,10 +58,13 @@ interface SongRepository {
     suspend fun deleteSong(songId: Long)
 
     /**
-     * Full or selective library JSON backup. Songs carrying ANY tag in
-     * [excludeTagNames] are left out — unless [onlySongIds] is given, in which
-     * case exactly those songs are exported (explicit selection wins).
-     * Every entry keeps its source URL so it can be re-downloaded later.
+     * Full or selective library JSON backup (v2): downloaded songs AND saved
+     * streaming bookmarks, every tag definition, and playlists. Songs or
+     * bookmarks carrying ANY tag in [excludeTagNames] are left out — unless
+     * [onlySongIds] is given, in which case exactly those songs are exported
+     * (explicit selection wins; playlists are skipped there since members
+     * would be missing). Every entry keeps its source URL so it can be
+     * brought back later.
      */
     suspend fun exportLibraryJson(
         excludeTagNames: Set<String>,
@@ -72,9 +75,10 @@ interface SongRepository {
     suspend fun describeImport(json: String): Result<ImportPreview>
 
     /**
-     * Re-downloads every entry from its source URL and restores its tags.
-     * Duplicates (same link already in library) are skipped for download but
-     * still get any missing tags merged. Progress is reported per song.
+     * Restores every entry: songs re-download from their source URL, saved
+     * bookmarks insert instantly (metadata only), tag definitions and
+     * playlists re-link by URL against the current library. Progress is
+     * reported per song, then per phase.
      */
     suspend fun importLibraryJson(
         json: String,
@@ -106,7 +110,11 @@ data class ImportPreview(
     val invalid: Int,
     val invalidReasons: List<String>,
     /** Entries that will actually be downloaded. */
-    val importable: Int
+    val importable: Int,
+    /** v2 sections: saved bookmarks / tag definitions / playlists in the file. */
+    val savedTotal: Int = 0,
+    val tagTotal: Int = 0,
+    val playlistTotal: Int = 0
 )
 
 data class ImportSummary(
@@ -114,7 +122,12 @@ data class ImportSummary(
     val imported: Int,
     val duplicatesMerged: Int,
     val failed: Int,
-    val errors: List<String>
+    val errors: List<String>,
+    /** Restored instantly (no download): bookmarks. */
+    val savedImported: Int = 0,
+    val savedDuplicates: Int = 0,
+    /** Playlists re-created / re-linked (existing ones just gain members). */
+    val playlistsRestored: Int = 0
 )
 
 data class PlaylistPreview(

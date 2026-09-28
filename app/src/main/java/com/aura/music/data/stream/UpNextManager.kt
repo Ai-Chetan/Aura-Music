@@ -4,6 +4,7 @@ import com.aura.music.data.network.NetworkGate
 import com.aura.music.data.prefs.PlaybackPreferences
 import com.aura.music.data.recommendations.RadioPick
 import com.aura.music.data.recommendations.RecommendationEngine
+import com.aura.music.domain.repository.UnifiedTrack
 import com.aura.music.domain.repository.YouTubeTrack
 import com.aura.music.playback.PlaybackController
 import com.aura.music.playback.PlaybackUiState
@@ -70,7 +71,7 @@ class UpNextManager @Inject constructor(
     }
 
     private var kind: SessionKind = SessionKind.NONE
-    private var origin: List<YouTubeTrack> = emptyList()
+    private var origin: List<UnifiedTrack> = emptyList()
     private var generation = 0
     private var fillJob: Job? = null
     private var radioAnnounced = false
@@ -90,8 +91,10 @@ class UpNextManager @Inject constructor(
     /**
      * Begins (or replaces) a playlist session at [index] in [tracks]: the
      * list continues in order behind the tapped track, then radio at the end.
+     * Mixed offline + streaming: downloads append as local files (instant,
+     * never resolve-counted), saved streams resolve lazily.
      */
-    fun startPlaylistSession(tracks: List<YouTubeTrack>, index: Int) {
+    fun startPlaylistSession(tracks: List<UnifiedTrack>, index: Int) {
         generation++
         fillJob?.cancel()
         resetRadioMemory()
@@ -101,12 +104,15 @@ class UpNextManager @Inject constructor(
         val g = generation
         val safeIndex = index.coerceIn(0, tracks.size - 1)
         fillJob = scope.launch {
-            var appended = 0
+            var resolved = 0
             for (i in safeIndex + 1 until tracks.size) {
-                if (appended >= PREFILL || g != generation) break
+                // Offline items cost nothing to append; only stream resolves
+                // count against the prefill cap so mixed lists still pre-warm.
+                if (resolved >= PREFILL || g != generation) break
                 try {
-                    controller.addToQueueEnd(transients.fromTrack(tracks[i]))
-                    appended++
+                    if (appendToQueueEnd(tracks[i])) {
+                        resolved++
+                    }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (_: Exception) {
@@ -116,7 +122,10 @@ class UpNextManager @Inject constructor(
             // Warm whatever follows so later taps/skips stay instant.
             if (g == generation) {
                 streamResolver.prefetch(
-                    tracks.drop(safeIndex + 1 + appended).take(6).map { it.url }
+                    tracks.drop(safeIndex + 1)
+                        .filterNot { it.isOffline }
+                        .take(6)
+                        .map { it.url }
                 )
             }
         }
@@ -208,10 +217,24 @@ class UpNextManager @Inject constructor(
         val queuedUrls = queue.map { it.sourceUrl }.toSet()
         return origin.all { it.url in queuedUrls }
     }
-
     /** Blocks re-launch attempts until [ms] from now (called on Main). */
     private fun blockFillsFor(ms: Long) {
         fillBlockedUntil = System.currentTimeMillis() + ms
+    }
+
+    /**
+     * Queues one unified track: downloaded rows append straight from their
+     * local file (returns false — no resolve spent), saved streams build a
+     * transient (returns true).
+     */
+    private suspend fun appendToQueueEnd(track: UnifiedTrack): Boolean {
+        val song = if (track.isOffline) {
+            track.song ?: return false
+        } else {
+            transients.fromSaved(track.saved ?: return false)
+        }
+        controller.addToQueueEnd(song)
+        return !track.isOffline
     }
 
     /** Continues a playlist session from its origin list; radio at the end. */
@@ -227,7 +250,7 @@ class UpNextManager @Inject constructor(
                     appendRadio(queue, g, announce = true)
                     return
                 }
-            controller.addToQueueEnd(transients.fromTrack(next))
+            appendToQueueEnd(next)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {

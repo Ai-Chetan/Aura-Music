@@ -45,6 +45,7 @@ import com.aura.music.ui.settings.SettingsScreen
 import com.aura.music.ui.onboarding.OnboardingViewModel
 import com.aura.music.ui.player.NowPlayingScreen
 import com.aura.music.ui.player.NowPlayingViewModel
+import com.aura.music.ui.playlist.PlaylistDetailScreen
 import com.aura.music.ui.songdetail.SongDetailScreen
 import com.aura.music.ui.tour.GuidedTourOverlay
 import com.aura.music.ui.tour.LocalTour
@@ -64,8 +65,11 @@ object Routes {
     const val BACKUP = "backup"
     const val SETTINGS = "settings"
     const val SONG_DETAIL = "song/{songId}"
+    const val PLAYLIST_DETAIL = "playlist/{playlistId}"
 
     fun songDetail(songId: Long): String = "song/$songId"
+
+    fun playlistDetail(playlistId: Long): String = "playlist/$playlistId"
 
     /** Add destination: mode 0 = Search, 1 = Paste link, null = auto. */
     fun add(mode: Int? = null): String =
@@ -263,6 +267,9 @@ fun AuraNavHost(
                                 },
                                 onDiscoverClick = {
                                     navController.navigate(Routes.add(0))
+                                },
+                                onOpenPlaylist = { playlistId ->
+                                    navController.navigate(Routes.playlistDetail(playlistId))
                                 }
                             )
                         }
@@ -358,6 +365,25 @@ fun AuraNavHost(
                         ) {
                             SongDetailScreen(
                                 onBack = { navController.popBackStack() }
+                            )
+                        }
+
+                        composable(
+                            route = Routes.PLAYLIST_DETAIL,
+                            arguments = listOf(
+                                navArgument("playlistId") { type = NavType.LongType }
+                            )
+                        ) {
+                            PlaylistDetailScreen(
+                                onBack = { navController.popBackStack() },
+                                onPlayStarted = {
+                                    navController.navigate(Routes.NOW_PLAYING) {
+                                        launchSingleTop = true
+                                    }
+                                },
+                                onOpenSong = { songId ->
+                                    navController.navigate(Routes.songDetail(songId))
+                                }
                             )
                         }
                     }

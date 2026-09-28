@@ -40,6 +40,7 @@ class PlaylistImportWorker @AssistedInject constructor(
     private val extractionRepository: ExtractionRepository,
     private val songDao: SongDao,
     private val tagRepository: TagRepository,
+    private val playlistRepository: com.aura.music.domain.repository.PlaylistRepository,
     private val downloader: SongFileDownloader
 ) : CoroutineWorker(appContext, workerParams) {
 
@@ -71,6 +72,16 @@ class PlaylistImportWorker @AssistedInject constructor(
             } catch (_: Exception) {
                 null
             }
+        }
+
+        // The import also becomes a real playlist — named after the tag the
+        // user chose, else the playlist's own title. Every landed video joins
+        // it (existing duplicates included).
+        val playlistName = playlistTag ?: playlist.title.takeIf { it.isNotBlank() }
+        val auraPlaylistId = try {
+            playlistName?.let { playlistRepository.getOrCreate(it) }
+        } catch (_: Exception) {
+            null
         }
 
         // Promote to a foreground service: a 50-track import outlives the
@@ -107,6 +118,9 @@ class PlaylistImportWorker @AssistedInject constructor(
                     if (tagId != null) {
                         try { tagRepository.addTagToSong(existing.id, tagId) } catch (_: Exception) { }
                     }
+                    auraPlaylistId?.let { pid ->
+                        try { playlistRepository.addSong(pid, existing.id) } catch (_: Exception) { }
+                    }
                 } else {
                     var currentTitle = "Song ${index + 1} of ${urls.size}"
                     val songId = downloader.downloadSingle(
@@ -125,6 +139,9 @@ class PlaylistImportWorker @AssistedInject constructor(
                     }
                     if (tagId != null) {
                         try { tagRepository.addTagToSong(songId, tagId) } catch (_: Exception) { }
+                    }
+                    auraPlaylistId?.let { pid ->
+                        try { playlistRepository.addSong(pid, songId) } catch (_: Exception) { }
                     }
                     imported++
                 }

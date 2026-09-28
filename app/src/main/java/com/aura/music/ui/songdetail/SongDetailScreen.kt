@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -54,6 +55,7 @@ import com.aura.music.ui.components.AuraEmptyState
 import com.aura.music.ui.components.AuraToast
 import com.aura.music.ui.components.AuraTopBar
 import com.aura.music.ui.components.ManageTagsDialog
+import com.aura.music.ui.components.PlaylistPickerDialog
 import com.aura.music.ui.components.QualityBadge
 import com.aura.music.ui.components.TagChip
 import com.aura.music.ui.components.collectToast
@@ -69,9 +71,12 @@ fun SongDetailScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val tagUsage by viewModel.tagUsage.collectAsStateWithLifecycle()
+    val playlists by viewModel.playlists.collectAsStateWithLifecycle()
+    val playlistMembership by viewModel.playlistMembership.collectAsStateWithLifecycle()
     val toast = collectToast(viewModel.messages)
     var newTagName by rememberSaveable { mutableStateOf("") }
     var showManageTags by rememberSaveable { mutableStateOf(false) }
+    var showPlaylistPicker by rememberSaveable { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         AmbientBackground()
@@ -165,6 +170,26 @@ fun SongDetailScreen(
             Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null)
             Spacer(modifier = Modifier.width(AuraSpacing.Xs))
             Text("Play")
+        }
+
+        Spacer(modifier = Modifier.height(AuraSpacing.Xs))
+
+        TextButton(
+            onClick = {
+                viewModel.loadPlaylistMembership()
+                showPlaylistPicker = true
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = AuraSpacing.Md)
+        ) {
+            Icon(
+                imageVector = Icons.Default.PlaylistAdd,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(AuraSpacing.Xs))
+            Text("Add to playlist")
         }
 
         Spacer(modifier = Modifier.height(AuraSpacing.Xl))
@@ -318,6 +343,21 @@ fun SongDetailScreen(
             usage = tagUsage,
             onDelete = viewModel::deleteTag,
             onDismiss = { showManageTags = false }
+        )
+    }
+
+    // state.song is nullable and `state` is delegated — pin it for the dialog.
+    val detailSong = state.song
+    if (showPlaylistPicker && detailSong != null) {
+        PlaylistPickerDialog(
+            trackLabel = detailSong.title,
+            playlists = playlists,
+            membership = playlistMembership,
+            onToggle = { playlist, isMember ->
+                viewModel.togglePlaylistMembership(playlist.id, isMember)
+            },
+            onCreateAndAdd = viewModel::createPlaylistAndAdd,
+            onDismiss = { showPlaylistPicker = false }
         )
     }
 

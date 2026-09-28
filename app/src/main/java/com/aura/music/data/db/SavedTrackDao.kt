@@ -19,6 +19,10 @@ interface SavedTrackDao {
     @Query("SELECT * FROM saved_tracks WHERE url = :url LIMIT 1")
     suspend fun getByUrl(url: String): SavedTrackEntity?
 
+    /** One-query duplicate check for backup imports. */
+    @Query("SELECT url FROM saved_tracks WHERE url IN (:urls)")
+    suspend fun getExistingUrls(urls: List<String>): List<String>
+
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(track: SavedTrackEntity): Long
 

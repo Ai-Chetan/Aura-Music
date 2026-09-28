@@ -9,9 +9,13 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.aura.music.data.backup.LibraryBackup
+import com.aura.music.data.db.PlaylistDao
+import com.aura.music.data.db.SavedTrackDao
+import com.aura.music.data.db.SavedTrackEntity
 import com.aura.music.data.db.SongDao
 import com.aura.music.data.db.SongEntity
 import com.aura.music.data.db.SongWithTags
+import com.aura.music.data.db.TagDao
 import com.aura.music.data.download.DownloadAudioWorker
 import com.aura.music.data.download.PlaylistImportWorker
 import com.aura.music.data.network.ConnectivityMonitor
@@ -50,8 +54,12 @@ import javax.inject.Singleton
 @Singleton
 class SongRepositoryImpl @Inject constructor(
     private val songDao: SongDao,
+    private val savedTrackDao: SavedTrackDao,
+    private val tagDao: TagDao,
+    private val playlistDao: PlaylistDao,
     private val extractionRepository: ExtractionRepository,
     private val tagRepository: TagRepository,
+    private val playlistRepository: com.aura.music.domain.repository.PlaylistRepository,
     private val connectivityMonitor: ConnectivityMonitor,
     @ApplicationContext private val context: Context
 ) : SongRepository {
@@ -380,17 +388,37 @@ class SongRepositoryImpl @Inject constructor(
     ): Result<String> {
         return try {
             val all = songDao.getAllSongsWithTags().first()
-            val kept = if (onlySongIds != null) {
-                // Selective export: exactly what the user picked.
-                all.filter { it.song.id in onlySongIds }
+            val normalized = excludeTagNames.map { it.trim().lowercase() }.toSet()
+            val kept: List<SongWithTags>
+            val savedKept: List<com.aura.music.data.db.SavedTrackWithTags>
+            val playlistsKept: List<com.aura.music.domain.repository.PlaylistExportEntry>
+            if (onlySongIds != null) {
+                // Selective export: exactly what the user picked. Playlists are
+                // skipped — their members would be missing from the file.
+                kept = all.filter { it.song.id in onlySongIds }
+                savedKept = emptyList()
+                playlistsKept = emptyList()
             } else {
-                val normalized = excludeTagNames.map { it.trim().lowercase() }.toSet()
-                if (normalized.isEmpty()) all
-                else all.filter { item ->
+                kept = if (normalized.isEmpty()) all else all.filter { item ->
                     item.tags.none { tag -> tag.name.lowercase() in normalized }
                 }
+                val savedAll = savedTrackDao.observeAllWithTags().first()
+                savedKept = if (normalized.isEmpty()) savedAll else savedAll.filter { item ->
+                    item.tags.none { tag -> tag.name.lowercase() in normalized }
+                }
+                playlistsKept = playlistRepository.snapshotForExport()
             }
-            Result.success(LibraryBackup.exportJson(kept))
+            // All tag definitions ride along (colors included) so an import
+            // on a fresh device restores the palette, not just used names.
+            val tagDefinitions = tagDao.getAllTags().first()
+            Result.success(
+                LibraryBackup.exportJson(
+                    songs = kept,
+                    saved = savedKept,
+                    tagDefinitions = tagDefinitions,
+                    playlists = playlistsKept
+                )
+            )
         } catch (e: Exception) {
             Result.failure(Exception("Export failed. Try again."))
         }
@@ -401,13 +429,19 @@ class SongRepositoryImpl @Inject constructor(
         val canonicalUrls = parsed.entries.map { YoutubeUrls.canonicalUrl(it.sourceUrl) }
         val existing = songDao.getExistingSourceUrls(canonicalUrls).toSet()
         val duplicates = canonicalUrls.count { it in existing }
+        val savedCanonical = parsed.savedEntries.map { YoutubeUrls.canonicalUrl(it.url) }
+        val savedExisting = savedTrackDao.getExistingUrls(savedCanonical).toSet()
+        val savedDuplicates = savedCanonical.count { it in savedExisting }
         return Result.success(
             ImportPreview(
                 total = parsed.entries.size,
                 duplicates = duplicates,
                 invalid = parsed.invalid.size,
                 invalidReasons = parsed.invalid,
-                importable = parsed.entries.size - duplicates
+                importable = parsed.entries.size - duplicates,
+                savedTotal = parsed.savedEntries.size,
+                tagTotal = parsed.tagDefinitions.size,
+                playlistTotal = parsed.playlists.size
             )
         )
     }
@@ -457,13 +491,73 @@ class SongRepositoryImpl @Inject constructor(
         }
         onProgress(entries.size, entries.size, "")
 
+        // ---- v2 sections: bookmarks restore instantly (metadata only). ----
+        var savedImported = 0
+        var savedDuplicates = 0
+        parsed.savedEntries.forEachIndexed { index, entry ->
+            onProgress(index, parsed.savedEntries.size, "Saved: ${entry.title}")
+            val canonical = YoutubeUrls.canonicalUrl(entry.url)
+            val existing = try {
+                savedTrackDao.getByUrl(canonical)
+            } catch (_: Exception) {
+                null
+            }
+            val savedId: Long
+            if (existing != null) {
+                savedDuplicates++
+                savedId = existing.id
+            } else {
+                savedId = try {
+                    savedTrackDao.insert(
+                        SavedTrackEntity(
+                            url = canonical,
+                            title = entry.title,
+                            artist = entry.artist,
+                            thumbnailUrl = entry.thumbnailUrl,
+                            durationMs = entry.durationMs,
+                            dateSaved = System.currentTimeMillis()
+                        )
+                    )
+                } catch (_: Exception) {
+                    -1L
+                }
+                if (savedId > 0) savedImported++ else failed++
+            }
+            if (savedId > 0) {
+                entry.tags.forEach { tag ->
+                    try {
+                        val tagId = tagRepository.getOrCreateTag(tag.name, tag.colorHex)
+                        if (tagId > 0) savedTrackDao.assignTag(
+                            com.aura.music.data.db.SavedTrackTagCrossRef(savedId, tagId)
+                        )
+                    } catch (_: Exception) {
+                    }
+                }
+            }
+        }
+        onProgress(parsed.savedEntries.size, parsed.savedEntries.size, "")
+
+        // ---- Tag definitions: colors come back even for unused tags. ----
+        parsed.tagDefinitions.forEach { tag ->
+            try {
+                tagRepository.getOrCreateTag(tag.name, tag.colorHex)
+            } catch (_: Exception) {
+            }
+        }
+
+        // ---- Playlists: re-link members by URL against the CURRENT library. ----
+        playlistRepository.restoreFromExport(parsed.playlists)
+
         return Result.success(
             ImportSummary(
                 total = entries.size,
                 imported = imported,
                 duplicatesMerged = duplicatesMerged,
                 failed = failed,
-                errors = errors
+                errors = errors,
+                savedImported = savedImported,
+                savedDuplicates = savedDuplicates,
+                playlistsRestored = parsed.playlists.size
             )
         )
     }

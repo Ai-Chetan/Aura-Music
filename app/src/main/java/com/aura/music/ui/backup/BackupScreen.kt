@@ -76,6 +76,8 @@ fun BackupScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val songs by viewModel.allSongs.collectAsStateWithLifecycle()
     val tags by viewModel.allTags.collectAsStateWithLifecycle()
+    val savedTracks by viewModel.savedTracks.collectAsStateWithLifecycle()
+    val playlists by viewModel.playlists.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     val saveLauncher = rememberLauncherForActivityResult(
@@ -279,7 +281,12 @@ fun BackupScreen(
                         text = if (state.selectiveExport) {
                             "$exportableCount selected"
                         } else {
-                            "$exportableCount of ${songs.size}"
+                            listOfNotNull(
+                                "$exportableCount songs",
+                                "${savedTracks.size} saved",
+                                "${playlists.size} playlists",
+                                "${tags.size} tags"
+                            ).joinToString(" • ")
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -404,6 +411,19 @@ fun BackupScreen(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        if (preview.savedTotal > 0 || preview.playlistTotal > 0 ||
+                            preview.tagTotal > 0
+                        ) {
+                            Text(
+                                text = listOfNotNull(
+                                    "${preview.savedTotal} saved tracks",
+                                    "${preview.playlistTotal} playlists",
+                                    "${preview.tagTotal} tags"
+                                ).joinToString(" • ") + " included",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                         (preview.invalidReasons.take(2)).forEach { reason ->
                             Text(
                                 text = reason,
@@ -414,15 +434,16 @@ fun BackupScreen(
 
                         Spacer(modifier = Modifier.height(AuraSpacing.Sm))
 
+                        val importableTotal = preview.importable + preview.savedTotal
                         Button(
                             onClick = viewModel::startImport,
-                            enabled = !state.importWorking && preview.importable > 0,
+                            enabled = !state.importWorking && importableTotal > 0,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(52.dp),
                             shape = RoundedCornerShape(AuraRadius.Md)
                         ) {
-                            Text("Import ${preview.importable}")
+                            Text("Import $importableTotal")
                         }
                     }
 
@@ -469,9 +490,23 @@ fun BackupScreen(
                             )
                             Spacer(modifier = Modifier.width(AuraSpacing.Xs))
                             Text(
-                                text = "Done: ${summary.imported} new, " +
-                                    "${summary.duplicatesMerged} already saved, " +
-                                    "${summary.failed} failed",
+                                text = buildString {
+                                    append(
+                                        "Done: ${summary.imported} new, " +
+                                            "${summary.duplicatesMerged} already saved, " +
+                                            "${summary.failed} failed"
+                                    )
+                                    if (summary.savedImported > 0 || summary.savedDuplicates > 0) {
+                                        append(" • saved: ${summary.savedImported} new" +
+                                            if (summary.savedDuplicates > 0) {
+                                                ", ${summary.savedDuplicates} existing"
+                                            } else ""
+                                        )
+                                    }
+                                    if (summary.playlistsRestored > 0) {
+                                        append(" • ${summary.playlistsRestored} playlists")
+                                    }
+                                },
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurface
                             )

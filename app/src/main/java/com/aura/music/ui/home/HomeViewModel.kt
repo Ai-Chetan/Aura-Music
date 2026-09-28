@@ -9,7 +9,7 @@ import com.aura.music.data.network.GateSnapshot
 import com.aura.music.data.network.NetworkGate
 import com.aura.music.data.stream.TransientTrackFactory
 import com.aura.music.data.stream.UpNextManager
-import com.aura.music.data.stream.asTracks
+import com.aura.music.domain.repository.asUnifiedSaved
 import com.aura.music.domain.repository.SavedTrackRepository
 import com.aura.music.domain.repository.SongRepository
 import com.aura.music.domain.repository.YouTubeTrack
@@ -193,7 +193,8 @@ class HomeViewModel @Inject constructor(
             try {
                 val transient = transients.fromSaved(track)
                 playbackController.playQueue(listOf(transient), 0)
-                val tracks = savedTrackRepository.observeSavedTracks().first().asTracks()
+                val tracks = savedTrackRepository.observeSavedWithTags().first()
+                    .asUnifiedSaved()
                 upNext.startPlaylistSession(
                     tracks,
                     tracks.indexOfFirst { it.url == track.url }
